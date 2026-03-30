@@ -27,7 +27,7 @@ from agents import DesignAnalyzer
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(
-    title="Design AI Analyzer API",
+    title="Терем ок? API",
     description="Мультиагентный анализ рекламных креативов",
     version="2.0.0",
 )
@@ -245,7 +245,7 @@ async def ingest_dataset_endpoint(background_tasks: BackgroundTasks) -> dict:
 
 if __name__ == "__main__":
     print(f"\n{'='*60}", flush=True)
-    print(f"  Design AI Analyzer API v2", flush=True)
+    print(f"  Терем ок? API v2", flush=True)
     print(f"  Документация: http://localhost:{API_PORT}/docs", flush=True)
     print(f"{'='*60}\n", flush=True)
     uvicorn.run(app, host="0.0.0.0", port=API_PORT)
