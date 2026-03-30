@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+uploads/
+clip_index.pkl
+vectorstore/
+vectorstore_dataset/
+data/
+.env
+*.egg-info/
+dist/
+build/
