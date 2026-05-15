@@ -2,447 +2,167 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Терем ок?</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
-            background: #0a0a14;
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-
-        .header {
-            text-align: center;
-            padding: 32px 20px 16px;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            color: #e0a020;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .header p {
-            color: #e0e0e0;
-            font-size: 14px;
-            margin-top: 6px;
-        }
-
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 0 20px 40px;
-        }
-
-        /* Upload area */
-        .upload-area {
-            border: 2px dashed #2a2a3e;
-            border-radius: 16px;
-            padding: 48px 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 24px;
-            background: #10101e;
-        }
-
-        .upload-area:hover, .upload-area.dragover {
-            border-color: #e0a020;
-            background: #14142a;
-        }
-
-        .upload-area.has-image {
-            padding: 16px;
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            color: #333;
-            margin-bottom: 12px;
-        }
-
-        .upload-text {
-            color: #888;
-            font-size: 15px;
-        }
-
-        .upload-text span {
-            color: #e0a020;
-            text-decoration: underline;
-            cursor: pointer;
-        }
-
-        .preview-img {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 12px;
-            display: none;
-        }
-
-        .upload-area.has-image .upload-icon,
-        .upload-area.has-image .upload-text { display: none; }
-        .upload-area.has-image .preview-img { display: block; margin: 0 auto; }
-
-        #fileInput { display: none; }
-
-        /* Analyze button */
-        .analyze-btn {
-            width: 100%;
-            padding: 14px;
-            background: #e0a020;
-            color: #0a0a14;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 32px;
-            display: none;
-        }
-
-        .analyze-btn:hover { background: #c8900a; }
-        .analyze-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
-
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            display: none;
-        }
-
-        .spinner {
-            width: 40px; height: 40px;
-            border: 3px solid #1e1e2e;
-            border-top-color: #e0a020;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .loading-text { color: #888; font-size: 14px; }
-
-        /* Results */
-        .results { display: none; }
-
-        .overall-card {
-            background: #10101e;
-            border-radius: 16px;
-            padding: 28px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .overall-label { color: #e0e0e0; font-size: 16px; font-weight: 500; margin-bottom: 8px; }
-
-        .overall-score {
-            font-size: 56px;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-
-        .overall-bar-bg {
-            background: #1a1a2e;
-            border-radius: 8px;
-            height: 10px;
-            max-width: 300px;
-            margin: 0 auto 12px;
-            overflow: hidden;
-        }
-
-        .overall-bar-fill {
-            height: 100%;
-            border-radius: 8px;
-            transition: width 1s ease;
-        }
-
-        .overall-summary { display: none; }
-
-        /* Criteria cards */
-        .criterion-card {
-            background: #10101e;
-            border-radius: 14px;
-            padding: 20px 24px;
-            margin-bottom: 12px;
-        }
-
-        .criterion-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .criterion-name { font-size: 16px; font-weight: 500; }
-
-        .criterion-score { font-size: 22px; font-weight: 700; }
-
-        .bar-bg {
-            background: #1a1a2e;
-            border-radius: 6px;
-            height: 8px;
-            overflow: hidden;
-            margin-bottom: 14px;
-        }
-
-        .bar-fill {
-            height: 100%;
-            border-radius: 6px;
-            transition: width 1s ease;
-        }
-
-        .criterion-analysis {
-            color: #999;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 14px;
-        }
-
-        .recs-title {
-            color: #e0a020;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .rec-item {
-            background: #14142a;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 6px;
-            font-size: 13px;
-            color: #e0e0e0;
-            line-height: 1.4;
-            border-left: 3px solid #e0a020;
-        }
-
-        /* Download */
-        .download-row {
-            display: flex;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .download-btn {
-            flex: 1;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: all 0.3s;
-            text-align: center;
-        }
-
-        .btn-primary { background: #e0a020; color: #0a0a14; }
-        .btn-primary:hover { background: #c8900a; }
-
-        .btn-secondary { background: #1e1e2e; color: #e0e0e0; border: 1px solid #2a2a3e; }
-        .btn-secondary:hover { background: #2a2a3e; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Терем ок? — Анализ рекламных креативов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=19">
+    <link rel="stylesheet" href="/static/css/base.css?v=19">
+    <link rel="stylesheet" href="/static/css/components.css?v=19">
+    <link rel="stylesheet" href="/static/css/pages.css?v=19">
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
 </head>
-<body>
+<body data-i18n-page-title="pageTitle.welcome">
 
-<div class="header">
-    <h1>Терем ок?</h1>
-    <p>Загрузите рекламный креатив для анализа</p>
+<main class="canvas welcome">
+    <h1 class="welcome__title" data-i18n="welcome.title">Добро пожаловать в Терем ок?</h1>
+
+    <button class="btn btn--white welcome__cta" data-modal-open="modal-login" type="button" data-i18n="welcome.cta">
+        Начать
+    </button>
+
+    <div class="welcome__grid">
+        <div class="welcome__cell">
+            <img src="/static/images/welcome-1.png" alt="Постер Monster" loading="lazy">
+        </div>
+        <div class="welcome__cell">
+            <img src="/static/images/welcome-3.png" alt="Реклама и баннер" loading="lazy">
+        </div>
+        <div class="welcome__cell">
+            <img src="/static/images/welcome-4.png" alt="Banana Initiative" loading="lazy">
+        </div>
+        <div class="welcome__cell">
+            <img src="/static/images/welcome-2.png" alt="Креатив для бренда" loading="lazy">
+        </div>
+        <div class="welcome__cell">
+            <img src="/static/images/welcome-5.png" alt="Midjourney keywords" loading="lazy">
+        </div>
+    </div>
+</main>
+
+<!-- Модалка: Вход -->
+<div class="modal" id="modal-login" role="dialog" aria-modal="true" aria-labelledby="modal-login-title">
+    <div class="modal__dialog">
+        <button class="modal__close" type="button" data-modal-close data-i18n-aria-label="common.close" aria-label="Закрыть" data-icon="close"></button>
+
+        <h2 class="modal__title" id="modal-login-title" data-i18n="auth.loginTitle">Войти в аккаунт</h2>
+        <p class="modal__subtitle" data-i18n="auth.loginSubtitle">Войдите для доступа к каталогу креативов</p>
+
+        <form class="modal__form" data-auth-form data-redirect="/home" novalidate>
+            <div class="field">
+                <div class="field__head"><label for="login-email" data-i18n="common.email">Email</label></div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="email"></span>
+                    <input class="field__input" id="login-email" name="email" type="email" data-i18n-placeholder="auth.placeholderEmail" placeholder="Введите Email" autocomplete="email" required>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="field__head">
+                    <label for="login-password" data-i18n="auth.passwordLabel">Пароль</label>
+                    <a class="field__link" href="#" data-modal-open="modal-recover" data-i18n="auth.loginForgot">Забыли пароль?</a>
+                </div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="lock"></span>
+                    <input class="field__input" id="login-password" name="password" type="password" data-i18n-placeholder="auth.placeholderPassword" placeholder="Введите пароль" autocomplete="current-password" required>
+                    <button class="field__toggle" type="button" data-password-toggle data-i18n-aria-label="common.showPassword" aria-label="Показать пароль" data-icon="eyeOff"></button>
+                </div>
+            </div>
+
+            <button class="btn btn--submit" type="submit" data-submit disabled data-i18n="auth.loginSubmit">Войти</button>
+        </form>
+
+        <div class="modal__footer">
+            <span class="modal__footer-text" data-i18n="auth.loginNoAccount">Нет аккаунта?</span>
+            <a class="modal__footer-link" data-modal-open="modal-register" data-i18n="auth.loginRegister">Зарегистрироваться</a>
+        </div>
+    </div>
 </div>
 
-<div class="container">
-    <div class="upload-area" id="uploadArea">
-        <div class="upload-icon">&#8682;</div>
-        <div class="upload-text">
-            Перетащите изображение сюда<br>или <span>выберите файл</span>
-        </div>
-        <img class="preview-img" id="previewImg" alt="Preview">
-    </div>
-    <input type="file" id="fileInput" accept="image/*">
+<!-- Модалка: Регистрация -->
+<div class="modal" id="modal-register" role="dialog" aria-modal="true" aria-labelledby="modal-register-title">
+    <div class="modal__dialog">
+        <button class="modal__close" type="button" data-modal-close data-i18n-aria-label="common.close" aria-label="Закрыть" data-icon="close"></button>
 
-    <button class="analyze-btn" id="analyzeBtn">Анализировать</button>
+        <h2 class="modal__title" id="modal-register-title" data-i18n="auth.registerTitle">Регистрация</h2>
 
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Анализирую изображение...</div>
-    </div>
-
-    <div class="results" id="results">
-        <div class="overall-card">
-            <div class="overall-label">Общая оценка</div>
-            <div class="overall-score" id="overallScore"></div>
-            <div class="overall-bar-bg">
-                <div class="overall-bar-fill" id="overallBar"></div>
+        <form class="modal__form" data-auth-form data-redirect="/home" novalidate>
+            <div class="field">
+                <div class="field__head"><label for="register-name" data-i18n="auth.registerName">Имя пользователя</label></div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="user"></span>
+                    <input class="field__input" id="register-name" name="username" type="text" data-i18n-placeholder="auth.registerNamePh" placeholder="Введите ваше имя" autocomplete="username" required>
+                </div>
             </div>
-            <div class="overall-summary" id="overallSummary"></div>
-        </div>
 
-        <div id="criteriaList"></div>
+            <div class="field">
+                <div class="field__head"><label for="register-email" data-i18n="common.email">Email</label></div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="email"></span>
+                    <input class="field__input" id="register-email" name="email" type="email" data-i18n-placeholder="auth.placeholderEmail" placeholder="Введите Email" autocomplete="email" required>
+                </div>
+            </div>
 
-        <div class="download-row">
-            <button class="download-btn btn-primary" onclick="downloadJSON()">Скачать JSON-отчёт</button>
-            <button class="download-btn btn-secondary" onclick="resetPage()">Новый анализ</button>
+            <div class="field">
+                <div class="field__head"><label for="register-password" data-i18n="auth.passwordLabel">Пароль</label></div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="lock"></span>
+                    <input class="field__input" id="register-password" name="password" type="password" data-i18n-placeholder="auth.placeholderPassword" placeholder="Введите пароль" autocomplete="new-password" required>
+                    <button class="field__toggle" type="button" data-password-toggle data-i18n-aria-label="common.showPassword" aria-label="Показать пароль" data-icon="eyeOff"></button>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="field__head"><label for="register-password-2" data-i18n="auth.registerConfirm">Подтверждение пароля</label></div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="lock"></span>
+                    <input class="field__input" id="register-password-2" name="password_confirm" type="password" data-i18n-placeholder="auth.placeholderPassword" placeholder="Введите пароль" autocomplete="new-password" required>
+                    <button class="field__toggle" type="button" data-password-toggle data-i18n-aria-label="common.showPassword" aria-label="Показать пароль" data-icon="eyeOff"></button>
+                </div>
+            </div>
+
+            <button class="btn btn--submit" type="submit" data-submit disabled data-i18n="auth.registerSubmit">Зарегистрироваться</button>
+        </form>
+
+        <div class="modal__footer">
+            <span class="modal__footer-text" data-i18n="auth.registerHasAccount">Уже есть аккаунт?</span>
+            <a class="modal__footer-link" data-modal-open="modal-login" data-i18n="auth.registerLogin">Войти</a>
         </div>
     </div>
 </div>
 
-<script>
-let lastResult = null;
+<!-- Модалка: Восстановление пароля -->
+<div class="modal" id="modal-recover" role="dialog" aria-modal="true" aria-labelledby="modal-recover-title">
+    <div class="modal__dialog">
+        <button class="modal__close" type="button" data-modal-close data-i18n-aria-label="common.close" aria-label="Закрыть" data-icon="close"></button>
 
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
-const previewImg = document.getElementById('previewImg');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const loading = document.getElementById('loading');
-const results = document.getElementById('results');
+        <h2 class="modal__title" id="modal-recover-title" data-i18n="auth.recoverTitle">Восстановление пароля</h2>
+        <p class="modal__subtitle" data-i18n="auth.recoverSubtitle">Введите свой email — мы отправим вам ссылку для сброса пароля</p>
 
-uploadArea.addEventListener('click', () => fileInput.click());
-
-uploadArea.addEventListener('dragover', e => {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
-});
-
-uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-
-uploadArea.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    if (e.dataTransfer.files.length) {
-        fileInput.files = e.dataTransfer.files;
-        showPreview(e.dataTransfer.files[0]);
-    }
-});
-
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) showPreview(fileInput.files[0]);
-});
-
-function showPreview(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-        previewImg.src = e.target.result;
-        uploadArea.classList.add('has-image');
-        analyzeBtn.style.display = 'block';
-        results.style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-}
-
-analyzeBtn.addEventListener('click', async () => {
-    if (!fileInput.files.length) return;
-
-    analyzeBtn.disabled = true;
-    analyzeBtn.textContent = 'Анализирую...';
-    loading.style.display = 'block';
-    results.style.display = 'none';
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    formData.append('format', 'json');
-
-    try {
-        const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error(await res.text());
-        lastResult = await res.json();
-        renderResults(lastResult);
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-    } finally {
-        loading.style.display = 'none';
-        analyzeBtn.disabled = false;
-        analyzeBtn.textContent = 'Анализировать';
-    }
-});
-
-function scoreColor(score) {
-    if (score <= 1.5) return '#e74c3c';
-    if (score <= 2.5) return '#e67e22';
-    if (score <= 3.5) return '#f1c40f';
-    if (score <= 4.5) return '#2ecc71';
-    return '#27ae60';
-}
-
-function barGradient(pct) {
-    return `linear-gradient(90deg, #e74c3c 0%, #f1c40f 50%, #27ae60 100%)`;
-}
-
-function renderResults(data) {
-    const color = scoreColor(data.overall_score);
-    document.getElementById('overallScore').textContent = data.overall_score + '/5';
-    document.getElementById('overallScore').style.color = color;
-
-    const overallBar = document.getElementById('overallBar');
-    overallBar.style.background = barGradient();
-    setTimeout(() => overallBar.style.width = (data.overall_score / 5 * 100) + '%', 50);
-
-    document.getElementById('overallSummary').textContent = data.summary;
-
-    const list = document.getElementById('criteriaList');
-    list.innerHTML = '';
-
-    data.criteria.forEach((c, i) => {
-        const cColor = scoreColor(c.score);
-        const pct = c.score / 5 * 100;
-
-        let recsHtml = '';
-        if (c.recommendations && c.recommendations.length) {
-            recsHtml = `<div class="recs-title">Рекомендации</div>`;
-            c.recommendations.forEach(r => {
-                recsHtml += `<div class="rec-item">${r}</div>`;
-            });
-        }
-
-        const card = document.createElement('div');
-        card.className = 'criterion-card';
-        card.innerHTML = `
-            <div class="criterion-header">
-                <div class="criterion-name">${c.name}</div>
-                <div class="criterion-score" style="color:${cColor}">${c.score}/5</div>
+        <form class="modal__form" data-auth-form data-redirect="#" novalidate>
+            <div class="field">
+                <div class="field__head"><label for="recover-email" data-i18n="common.email">Email</label></div>
+                <div class="field__control">
+                    <span class="field__icon" aria-hidden="true" data-icon="email"></span>
+                    <input class="field__input" id="recover-email" name="email" type="email" data-i18n-placeholder="auth.placeholderEmail" placeholder="Введите Email" autocomplete="email" required>
+                </div>
             </div>
-            <div class="bar-bg">
-                <div class="bar-fill" style="width:0%;background:${barGradient()}"></div>
-            </div>
-            <div class="criterion-analysis">${c.analysis}</div>
-            ${recsHtml}
-        `;
-        list.appendChild(card);
 
-        setTimeout(() => {
-            card.querySelector('.bar-fill').style.width = pct + '%';
-        }, 100 + i * 150);
-    });
+            <button class="btn btn--submit" type="submit" data-submit disabled data-i18n="auth.recoverSubmit">Отправить ссылку</button>
+        </form>
 
-    results.style.display = 'block';
-    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+        <div class="modal__footer">
+            <span class="modal__footer-text" data-i18n="auth.recoverBack">Вернуться к</span>
+            <a class="modal__footer-link" data-modal-open="modal-login" data-i18n="auth.recoverLogin">РІС…РѕРґСѓ</a>
+        </div>
+    </div>
+</div>
 
-function downloadJSON() {
-    if (!lastResult) return;
-    const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'design-analysis.json';
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function resetPage() {
-    fileInput.value = '';
-    uploadArea.classList.remove('has-image');
-    previewImg.src = '';
-    analyzeBtn.style.display = 'none';
-    results.style.display = 'none';
-    lastResult = null;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-</script>
-
+<script src="/static/js/i18n.js?v=19"></script>
+<script src="/static/js/icons.js?v=19"></script>
+<script src="/static/js/auth.js?v=19"></script>
 </body>
 </html>
+
+

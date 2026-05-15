@@ -42,6 +42,8 @@ app.add_middleware(
 
 STATIC_DIR = BASE_DIR / "static"
 
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 analyzer: DesignAnalyzer | None = None
 ingest_status: dict = {"running": False, "progress": 0, "total": 0, "done": False}
 
@@ -52,15 +54,69 @@ class CategoryEnum(str, Enum):
     typography = "typography"
 
 
+PAGES = {
+    "/": "index.html",
+    "/home": "home.html",
+    "/upload": "upload.html",
+    "/catalog": "catalog.html",
+    "/analyze": "analyze.html",
+    "/reports": "reports.html",
+    "/profile": "profile.html",
+}
+
+
+def _page_response(filename: str) -> FileResponse:
+    return FileResponse(STATIC_DIR / filename)
+
+
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    return FileResponse(STATIC_DIR / "index.html")
+async def root() -> FileResponse:
+    return _page_response(PAGES["/"])
+
+
+@app.get("/home", response_class=HTMLResponse)
+async def home_page() -> FileResponse:
+    return _page_response(PAGES["/home"])
+
+
+@app.get("/upload", response_class=HTMLResponse)
+async def upload_page() -> FileResponse:
+    return _page_response(PAGES["/upload"])
+
+
+@app.get("/catalog", response_class=HTMLResponse)
+async def catalog_page() -> FileResponse:
+    return _page_response(PAGES["/catalog"])
+
+
+@app.get("/analyze", response_class=HTMLResponse)
+async def analyze_page() -> FileResponse:
+    return _page_response(PAGES["/analyze"])
+
+
+@app.get("/reports", response_class=HTMLResponse)
+async def reports_page() -> FileResponse:
+    return _page_response(PAGES["/reports"])
+
+
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page() -> FileResponse:
+    return _page_response(PAGES["/profile"])
+
+
+def _ensure_analyzer() -> DesignAnalyzer:
+    global analyzer
+    if analyzer is None:
+        analyzer = DesignAnalyzer()
+    return analyzer
 
 
 @app.on_event("startup")
 async def startup() -> None:
-    global analyzer
-    analyzer = DesignAnalyzer()
+    try:
+        _ensure_analyzer()
+    except Exception as e:
+        print(f"[startup] Не удалось инициализировать анализатор: {e}", flush=True)
 
 
 @app.get("/api/health")
@@ -191,7 +247,7 @@ async def analyze_upload(
         shutil.copyfileobj(file.file, f)
 
     try:
-        result = analyzer.analyze(str(save_path), cat)
+        result = _ensure_analyzer().analyze(str(save_path), cat)
     except Exception as e:
         raise HTTPException(500, f"Ошибка анализа: {e}")
 
@@ -210,7 +266,7 @@ async def analyze_base64(request: AnalysisRequest) -> DesignAnalysis:
         raise HTTPException(400, "Поле image_base64 обязательно")
 
     try:
-        return analyzer.analyze_base64(request.image_base64, category=None)
+        return _ensure_analyzer().analyze_base64(request.image_base64, category=None)
     except Exception as e:
         raise HTTPException(500, f"Ошибка анализа: {e}")
 
@@ -246,6 +302,7 @@ async def ingest_dataset_endpoint(background_tasks: BackgroundTasks) -> dict:
 if __name__ == "__main__":
     print(f"\n{'='*60}", flush=True)
     print(f"  Терем ок? API v2", flush=True)
+    print(f"  Сайт:         http://localhost:{API_PORT}/", flush=True)
     print(f"  Документация: http://localhost:{API_PORT}/docs", flush=True)
     print(f"{'='*60}\n", flush=True)
     uvicorn.run(app, host="0.0.0.0", port=API_PORT)

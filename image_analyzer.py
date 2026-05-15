@@ -11,6 +11,7 @@
 import colorsys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -209,8 +210,8 @@ def _get_color_harmony(colors: list[dict]) -> str:
     return f"смешанная (разброс оттенков ~{avg_diff:.0f}°)"
 
 
-def analyze_image(image_path: str) -> str:
-    """Полный анализ изображения, результат — текстовое описание для LLM."""
+def analyze_image_full(image_path: str) -> dict[str, Any]:
+    """Полный анализ изображения: текстовое описание + сырые метрики."""
     img = Image.open(image_path).convert("RGB")
     w, h = img.size
 
@@ -220,37 +221,54 @@ def analyze_image(image_path: str) -> str:
     composition = _analyze_composition(img)
     harmony = _get_color_harmony(colors)
 
-    lines = [
-        f"### Технические данные изображения",
-        f"Размер: {w}x{h} пикселей, соотношение сторон: {w/h:.2f}",
-        "",
-        f"### Цветовая палитра",
-        f"Тип гармонии: {harmony}",
-        f"Доминирующие цвета:",
-    ]
-    for c in colors[:6]:
-        lines.append(f"  - {c['name']} ({c['hex']}): {c['percent']}%")
+    description = _build_description_text(
+        w, h, colors, harmony, contrast, saturation, composition
+    )
+    metrics = {
+        "width": w,
+        "height": h,
+        "aspect_ratio": round(w / h, 2),
+        "colors": colors,
+        "harmony": harmony,
+        "contrast": contrast,
+        "saturation": saturation,
+        "composition": composition,
+    }
+    return {"description": description, "metrics": metrics}
 
-    lines += [
+
+def analyze_image(image_path: str) -> str:
+    """Текстовое описание изображения для LLM."""
+    return analyze_image_full(image_path)["description"]
+
+
+def _build_description_text(
+    w: int,
+    h: int,
+    colors: list[dict],
+    harmony: str,
+    contrast: dict,
+    saturation: dict,
+    composition: dict,
+) -> str:
+    """Собирает читаемое описание (без markdown-заголовков и палитры)."""
+    lines = [
+        "Технические данные изображения",
+        f"Размер: {w}x{h} пикселей, соотношение сторон: {w/h:.2f}",
+        f"Тип цветовой гармонии: {harmony}",
         "",
-        f"### Контрастность и яркость",
+        "Контрастность и яркость",
         f"Средняя яркость: {contrast['mean_brightness']}/255 — {contrast['brightness_level']}",
         f"Контрастность: {contrast['contrast_level']} (разброс: {contrast['std_deviation']})",
         f"Диапазон яркости: {contrast['contrast_ratio']:.1f}:1",
         "",
-        f"### Насыщенность",
+        "Насыщенность",
         f"Средняя насыщенность: {saturation['mean_saturation']:.0f}% — {saturation['saturation_level']}",
         "",
-        f"### Композиция",
+        "Композиция",
         f"Баланс: {composition['balance_verdict']}",
-        f"  Горизонтальный дисбаланс: {composition['horizontal_balance']} (лево vs право)",
-        f"  Вертикальный дисбаланс: {composition['vertical_balance']} (верх vs низ)",
+        f"Горизонтальный дисбаланс: {composition['horizontal_balance']} (лево vs право)",
+        f"Вертикальный дисбаланс: {composition['vertical_balance']} (верх vs низ)",
         f"Основной визуальный вес: зона «{composition['visual_weight_center']}»",
-        "",
-        f"### Распределение активности по зонам (правило третей)",
     ]
-    for zone, value in composition["zones_activity"].items():
-        bar_len = int(value / 5)
-        lines.append(f"  {zone:15s}: {'█' * bar_len} ({value})")
-
     return "\n".join(lines)

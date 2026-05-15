@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Терем ок? — Профиль</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=19">
+    <link rel="stylesheet" href="/static/css/base.css?v=19">
+    <link rel="stylesheet" href="/static/css/components.css?v=19">
+    <link rel="stylesheet" href="/static/css/pages.css?v=19">
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+</head>
+<body data-i18n-page-title="pageTitle.profile">
+
+<div class="canvas page page--has-subheader profile-page">
+    <header class="header">
+        <a class="header__logo" href="/home" aria-label="Терем ок?">
+            <img src="/static/images/logo.png?v=2" alt="Терем ок?">
+        </a>
+        <button class="header__toggle" type="button" data-i18n-aria-label="common.menu" aria-label="Меню" data-icon="menu"></button>
+        <nav class="header__nav" aria-label="Главная навигация">
+            <a class="header__nav-link" href="/upload">Загрузка изображений</a>
+            <a class="header__nav-link" href="/catalog">Каталог</a>
+            <a class="header__nav-link" href="/analyze">Анализ</a>
+            <a class="header__nav-link" href="/reports">Отчёты</a>
+            <a class="header__nav-link" href="/profile">Профиль</a>
+        </nav>
+    </header>
+
+    <div class="subheader">
+        <div class="subheader__inner">
+            <div class="profile-tabs-wrap">
+                <nav class="profile-tabs" role="tablist">
+                    <button class="profile-tab is-active" type="button" data-tab="overview" role="tab">
+                        <span class="profile-tab__icon" data-icon="user"></span>
+                        <span data-i18n="profile.tabs.overview">Профиль</span>
+                    </button>
+                    <button class="profile-tab" type="button" data-tab="subscription" role="tab">
+                        <span class="profile-tab__icon" data-icon="crown"></span>
+                        <span data-i18n="profile.tabs.subscription">РџРѕРґРїРёСЃРєР°</span>
+                    </button>
+                    <button class="profile-tab" type="button" data-tab="settings" role="tab">
+                        <span class="profile-tab__icon" data-icon="cog"></span>
+                        <span data-i18n="profile.tabs.settings">Настройки</span>
+                    </button>
+                </nav>
+                <a class="profile-logout" href="/" data-i18n-title="common.signOut" title="Выйти">
+                    <span data-icon="logout" aria-hidden="true"></span>
+                    <span data-i18n="common.signOut">Выйти</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="page__inner">
+
+        <!-- Профиль -->
+        <section class="profile-panel is-active" data-panel="overview" role="tabpanel">
+            <h2 class="profile-section-title" data-i18n="profile.activity">Ваша активность</h2>
+            <div class="profile-grid profile-grid--two">
+                <div class="profile-stat-card">
+                    <div class="profile-stat-card__icon"><span data-icon="sparkles"></span></div>
+                    <div class="profile-stat-card__body">
+                        <span class="profile-stat-card__label" data-i18n="profile.totalAnalyses">Всего анализов</span>
+                        <span class="profile-stat-card__value" id="stat-total">0</span>
+                        <span class="profile-stat-card__trend" id="stat-total-trend" data-i18n="profile.noWeek">Пока нет анализов за неделю</span>
+                    </div>
+                </div>
+
+                <div class="profile-stat-card">
+                    <div class="profile-stat-card__icon profile-stat-card__icon--star"><span data-icon="star"></span></div>
+                    <div class="profile-stat-card__body">
+                        <span class="profile-stat-card__label" data-i18n="profile.avgScore">Средняя оценка</span>
+                        <span class="profile-stat-card__value" id="stat-avg">0</span>
+                        <span class="profile-stat-card__trend" id="stat-avg-sub" data-i18n="profile.noData">Нет данных</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-grid profile-grid--two profile-grid--gap-lg">
+                <div class="profile-card profile-card--recent">
+                    <div class="profile-card__header">
+                        <h3 class="profile-card__title" data-i18n="profile.recent.title">Недавние анализы</h3>
+                        <a class="profile-card__action" href="/reports"><span data-i18n="profile.recent.seeAll">Смотреть все</span> <span data-icon="chevronRight"></span></a>
+                    </div>
+                    <ul class="profile-recent" id="recent-list">
+                        <!-- заполняется из Store при загрузке страницы -->
+                    </ul>
+                    <div class="profile-recent__pager is-hidden" id="recent-pager">
+                        <!-- точки-страницы -->
+                    </div>
+                    <div class="profile-recent__empty is-hidden" id="recent-empty">
+                        <p data-i18n="profile.recent.empty">Пока нет завершённых анализов. Загрузите макет и запустите анализ из каталога.</p>
+                    </div>
+                </div>
+
+                <div class="profile-card profile-card--plan">
+                    <div class="profile-card__header">
+                        <h3 class="profile-card__title" data-i18n="profile.plan.title">Ваш тарифный план</h3>
+                    </div>
+                    <div class="profile-plan">
+                        <div class="profile-plan__avatar"><span data-icon="user"></span></div>
+                        <div>
+                            <div class="profile-plan__name" data-i18n="profile.plan.free">Бесплатный</div>
+                            <div class="profile-plan__sub" data-i18n="profile.plan.freeSub">Для знакомства с сервисом</div>
+                        </div>
+                    </div>
+                    <ul class="profile-plan__features">
+                        <li><span data-icon="folder"></span><span data-i18n="profile.plan.f1">До 5 анализов в месяц</span></li>
+                        <li><span data-icon="sparkles"></span><span data-i18n="profile.plan.f2">Базовая модель анализа</span></li>
+                        <li><span data-icon="user"></span><span data-i18n="profile.plan.f3">Email поддержка</span></li>
+                    </ul>
+                    <button class="btn btn--primary btn--block btn--rect" type="button" data-go-tab="subscription">
+                        <span data-i18n="profile.plan.cta">Перейти к тарифам</span>
+                        <span data-icon="chevronRight"></span>
+                    </button>
+                </div>
+            </div>
+
+            <h2 class="profile-section-title" data-i18n="profile.actions">Быстрые действия</h2>
+            <div class="profile-grid profile-grid--two">
+                <a class="profile-action" href="/upload">
+                    <span class="profile-action__icon"><span data-icon="plus2"></span></span>
+                    <span class="profile-action__body">
+                        <span class="profile-action__title" data-i18n="profile.actions.new">Новый анализ</span>
+                        <span class="profile-action__sub" data-i18n="profile.actions.newSub">Загрузите макет для анализа</span>
+                    </span>
+                    <span class="profile-action__chevron" data-icon="chevronRight"></span>
+                </a>
+                <a class="profile-action" href="/reports">
+                    <span class="profile-action__icon"><span data-icon="folder"></span></span>
+                    <span class="profile-action__body">
+                        <span class="profile-action__title" data-i18n="profile.actions.reports">Мои отчёты</span>
+                        <span class="profile-action__sub" data-i18n="profile.actions.reportsSub">История и результаты анализов</span>
+                    </span>
+                    <span class="profile-action__chevron" data-icon="chevronRight"></span>
+                </a>
+            </div>
+
+            <p class="profile-footnote"><span data-icon="lock"></span><span data-i18n="profile.footnote">Ваши данные защищены и не передаются третьим лицам</span></p>
+        </section>
+
+        <!-- РџРѕРґРїРёСЃРєР° -->
+        <section class="profile-panel" data-panel="subscription" role="tabpanel" hidden>
+            <h2 class="profile-section-title" data-i18n="subs.title">Выберите тарифный план</h2>
+            <div class="profile-grid profile-grid--three">
+                <article class="plan-card">
+                    <h3 class="plan-card__title" data-i18n="subs.free">Бесплатный</h3>
+                    <p class="plan-card__sub" data-i18n="subs.free.sub">Ознакомление с сервисом</p>
+                    <div class="plan-card__price"><span class="plan-card__price-value">0 ₽</span><span class="plan-card__price-period" data-i18n="subs.permonth">в мес</span></div>
+                    <ul class="plan-card__features">
+                        <li data-i18n="subs.free.f1">До 5 анализов в месяц</li>
+                        <li data-i18n="subs.free.f2">Аналитика по всем критериям</li>
+                        <li data-i18n="subs.free.f3">Стандартная модель анализа</li>
+                        <li data-i18n="subs.free.f4">Ограниченное кол-во рекомендаций креатива</li>
+                    </ul>
+                        <button class="btn btn--block btn--rect btn--soft is-current" type="button" disabled data-i18n="subs.current">Текущий план</button>
+                </article>
+
+                <article class="plan-card plan-card--wine">
+                    <h3 class="plan-card__title" data-i18n="subs.basic">Базовый</h3>
+                    <p class="plan-card__sub" data-i18n="subs.basic.sub">Оптимально для начинающих авторов</p>
+                    <div class="plan-card__price"><span class="plan-card__price-value">300 ₽</span><span class="plan-card__price-period" data-i18n="subs.permonth">в мес</span></div>
+                    <ul class="plan-card__features">
+                        <li data-i18n="subs.basic.f1">До 20 анализов в месяц</li>
+                        <li data-i18n="subs.basic.f2">Аналитика по всем критериям</li>
+                        <li data-i18n="subs.basic.f3">Расширенная модель анализа</li>
+                        <li data-i18n="subs.basic.f4">Дополнительные форматы отчётов</li>
+                        <li data-i18n="subs.basic.f5">Экспорт результатов в PDF</li>
+                        <li data-i18n="subs.basic.f6">Дополнительное кол-во рекомендаций креатива</li>
+                    </ul>
+                    <button class="btn btn--block btn--rect btn--cream" type="button" data-i18n="subs.choose">Перейти на этот план</button>
+                </article>
+
+                <article class="plan-card plan-card--violet">
+                    <h3 class="plan-card__title" data-i18n="subs.pro">Профессиональный</h3>
+                    <p class="plan-card__sub" data-i18n="subs.pro.sub">Максимальные возможности для творчества</p>
+                    <div class="plan-card__price"><span class="plan-card__price-value">800 ₽</span><span class="plan-card__price-period" data-i18n="subs.permonth">в мес</span></div>
+                    <ul class="plan-card__features">
+                        <li data-i18n="subs.pro.f1">Неограниченное кол-во анализов</li>
+                        <li data-i18n="subs.pro.f2">Аналитика по всем критериям</li>
+                        <li data-i18n="subs.pro.f3">Расширенная модель анализа</li>
+                        <li data-i18n="subs.pro.f4">Расширенный анализ конкурентов</li>
+                        <li data-i18n="subs.pro.f5">Дополнительные модели анализа</li>
+                        <li data-i18n="subs.pro.f6">Экспорт результатов в PDF, JSON, TXT</li>
+                        <li data-i18n="subs.pro.f7">Неограниченное кол-во рекомендаций креатива</li>
+                    </ul>
+                    <button class="btn btn--block btn--rect btn--cream" type="button" data-i18n="subs.choose">Перейти на этот план</button>
+                </article>
+            </div>
+        </section>
+
+        <!-- Настройки -->
+        <section class="profile-panel" data-panel="settings" role="tabpanel" hidden>
+            <div class="settings-layout">
+                <aside class="settings-side">
+                    <h2 class="settings-side__title" data-i18n="settings.title">Настройки</h2>
+                    <nav class="settings-side__nav">
+                        <button class="settings-side__link is-active" type="button" data-anchor="profile">
+                            <span data-icon="user"></span><span data-i18n="settings.side.profile">Профиль</span>
+                        </button>
+                        <button class="settings-side__link" type="button" data-anchor="notifications">
+                            <span data-icon="bell"></span><span data-i18n="settings.side.notifications">Уведомления</span>
+                        </button>
+                        <button class="settings-side__link" type="button" data-anchor="security">
+                            <span data-icon="shield"></span><span data-i18n="settings.side.security">Безопасность</span>
+                        </button>
+                        <button class="settings-side__link" type="button" data-anchor="locale">
+                            <span data-icon="globe"></span><span data-i18n="settings.side.locale">Язык и регион</span>
+                        </button>
+                    </nav>
+                    <div class="settings-help">
+                        <div class="settings-help__icon"><span data-icon="helpCircle"></span></div>
+                        <div class="settings-help__title" data-i18n="settings.help.title">Нужна помощь?</div>
+                        <p class="settings-help__text" data-i18n="settings.help.text">Свяжитесь с нашей поддержкой, мы поможем вам быстрее.</p>
+                        <button class="btn btn--block btn--rect btn--primary btn--sm" type="button" data-i18n="settings.help.cta">Написать в поддержку</button>
+                    </div>
+                </aside>
+
+                <div class="settings-main">
+                    <section class="settings-block" id="set-profile">
+                        <div class="settings-block__head">
+                            <div>
+                                <h3 class="settings-block__title" data-i18n="settings.profile.title">Профиль</h3>
+                                <p class="settings-block__sub" data-i18n="settings.profile.sub">Управляйте своими данными пользователя</p>
+                            </div>
+                            <div class="settings-block__avatar"><span data-icon="user"></span></div>
+                        </div>
+                        <div class="settings-grid settings-grid--two">
+                            <div class="field">
+                                <div class="field__head"><label for="set-name" data-i18n="settings.profile.name">Имя</label></div>
+                                <div class="field__control">
+                                    <input class="field__input" id="set-name" type="text" value="Иван Петров">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="field__head"><label for="set-email" data-i18n="settings.profile.email">Email</label></div>
+                                <div class="field__control">
+                                    <input class="field__input" id="set-email" type="email" value="ivan.petrov@exemple.com">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="field__head"><label for="set-date" data-i18n="settings.profile.regDate">Дата регистрации</label></div>
+                            <div class="field__control">
+                                <span class="field__icon" data-icon="calendar"></span>
+                                <input class="field__input" id="set-date" type="date" value="2026-04-23">
+                            </div>
+                        </div>
+                        <button class="btn btn--primary btn--rect" type="button" id="btn-save-profile" data-i18n="settings.profile.save">Сохранить изменения</button>
+                    </section>
+
+                    <section class="settings-block" id="set-notifications">
+                        <div class="settings-block__head">
+                            <div>
+                                <h3 class="settings-block__title" data-i18n="settings.notif.title">Уведомления</h3>
+                                <p class="settings-block__sub" data-i18n="settings.notif.sub">Настройте, какие уведомления вы хотите получать</p>
+                            </div>
+                        </div>
+                        <div class="settings-toggle-row">
+                            <div class="settings-toggle-row__icon"><span data-icon="email"></span></div>
+                            <div class="settings-toggle-row__text">
+                                <div class="settings-toggle-row__title" data-i18n="settings.notif.email">Email уведомления о новых отчётах</div>
+                                <p class="settings-toggle-row__sub" data-i18n="settings.notif.emailSub">Получайте отчёты о завершённых анализах</p>
+                            </div>
+                            <button class="toggle is-on" type="button" role="switch" aria-checked="true" data-toggle><span class="toggle__thumb"></span></button>
+                        </div>
+                        <div class="settings-toggle-row">
+                            <div class="settings-toggle-row__icon"><span data-icon="bell"></span></div>
+                            <div class="settings-toggle-row__text">
+                                <div class="settings-toggle-row__title" data-i18n="settings.notif.updates">Уведомления об обновлениях</div>
+                                <p class="settings-toggle-row__sub" data-i18n="settings.notif.updatesSub">Информация о новых функциях и улучшениях</p>
+                            </div>
+                            <button class="toggle is-on" type="button" role="switch" aria-checked="true" data-toggle><span class="toggle__thumb"></span></button>
+                        </div>
+                    </section>
+
+                    <section class="settings-block" id="set-security">
+                        <div class="settings-block__head">
+                            <div>
+                                <h3 class="settings-block__title" data-i18n="settings.security.title">Безопасность</h3>
+                                <p class="settings-block__sub" data-i18n="settings.security.sub">Поддерживайте безопасность своего аккаунта</p>
+                            </div>
+                        </div>
+                        <button class="settings-row" type="button" id="btn-toggle-password">
+                            <span class="settings-row__icon"><span data-icon="lock"></span></span>
+                            <span class="settings-row__body">
+                                <span class="settings-row__title" data-i18n="settings.security.changePassword">Изменить пароль</span>
+                                <span class="settings-row__sub" data-i18n="settings.security.changePasswordSub">Рекомендуется обновлять пароль каждые 3–6 месяцев</span>
+                            </span>
+                            <span class="settings-row__chevron settings-row__chevron--toggle" data-icon="chevronRight"></span>
+                        </button>
+
+                        <form class="password-form is-hidden" id="password-form" novalidate>
+                            <div class="field">
+                                <div class="field__head"><label for="pwd-current" data-i18n="settings.security.current">Текущий пароль</label></div>
+                                <div class="field__control">
+                                    <span class="field__icon" data-icon="lock"></span>
+                                    <input class="field__input" id="pwd-current" type="password" placeholder="••••••••" autocomplete="current-password">
+                                    <button class="field__toggle" type="button" data-password-toggle aria-label="Показать пароль" data-icon="eyeOff"></button>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="field__head"><label for="pwd-new" data-i18n="settings.security.new">Новый пароль</label></div>
+                                <div class="field__control">
+                                    <span class="field__icon" data-icon="lock"></span>
+                                    <input class="field__input" id="pwd-new" type="password" placeholder="••••••••" autocomplete="new-password">
+                                    <button class="field__toggle" type="button" data-password-toggle aria-label="Показать пароль" data-icon="eyeOff"></button>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="field__head"><label for="pwd-confirm" data-i18n="settings.security.confirm">Повторите новый пароль</label></div>
+                                <div class="field__control">
+                                    <span class="field__icon" data-icon="lock"></span>
+                                    <input class="field__input" id="pwd-confirm" type="password" placeholder="••••••••" autocomplete="new-password">
+                                    <button class="field__toggle" type="button" data-password-toggle aria-label="Показать пароль" data-icon="eyeOff"></button>
+                                </div>
+                            </div>
+                            <div class="password-form__hint" id="pwd-hint" aria-live="polite"></div>
+                            <div class="password-form__actions">
+                                <button class="btn btn--primary btn--rect" type="submit" id="btn-save-password" data-i18n="settings.security.save">Сохранить пароль</button>
+                                <button class="btn btn--cancel is-active" type="button" id="btn-cancel-password" data-i18n="common.cancel">Отмена</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="settings-block" id="set-locale">
+                        <div class="settings-block__head">
+                            <div>
+                                <h3 class="settings-block__title" data-i18n="settings.locale.title">Язык и регион</h3>
+                                <p class="settings-block__sub" data-i18n="settings.locale.sub">Выберите язык интерфейса</p>
+                            </div>
+                        </div>
+
+                        <div class="dropdown settings-locale-dropdown" id="dd-locale" data-value="ru">
+                            <button class="settings-row dropdown__toggle" type="button">
+                                <span class="settings-row__icon"><span data-icon="globe"></span></span>
+                                <span class="settings-row__body">
+                                    <span class="settings-row__title" data-i18n="settings.locale.uiLang">Язык интерфейса</span>
+                                </span>
+                                <span class="dropdown__label settings-row__value">Р СѓСЃСЃРєРёР№</span>
+                                <span class="dropdown__chevron settings-row__chevron" data-icon="chevron"></span>
+                            </button>
+                            <div class="dropdown__menu">
+                                <button class="dropdown__option is-active" data-value="ru">Р СѓСЃСЃРєРёР№</button>
+                                <button class="dropdown__option" data-value="en">English</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="/static/js/i18n.js?v=19"></script>
+<script src="/static/js/icons.js?v=19"></script>
+<script src="/static/js/app.js?v=19"></script>
+<script src="/static/js/store.js?v=19"></script>
+<script src="/static/js/dropdown.js?v=19"></script>
+<script src="/static/js/auth.js?v=19"></script>
+<script src="/static/js/profile.js?v=19"></script>
+</body>
+</html>
+
+

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Терем ок? — Главная</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=19">
+    <link rel="stylesheet" href="/static/css/base.css?v=19">
+    <link rel="stylesheet" href="/static/css/components.css?v=19">
+    <link rel="stylesheet" href="/static/css/pages.css?v=19">
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+</head>
+<body data-i18n-page-title="pageTitle.home">
+
+<div class="canvas home">
+    <header class="header">
+        <a class="header__logo" href="/home" aria-label="Терем ок?">
+            <img src="/static/images/logo.png?v=2" alt="Терем ок?">
+        </a>
+        <button class="header__toggle" type="button" data-i18n-aria-label="common.menu" aria-label="Меню" data-icon="menu"></button>
+        <nav class="header__nav" aria-label="Главная навигация">
+            <a class="header__nav-link" href="/upload">Загрузка изображений</a>
+            <a class="header__nav-link" href="/catalog">Каталог</a>
+            <a class="header__nav-link" href="/analyze">Анализ</a>
+            <a class="header__nav-link" href="/reports">Отчёты</a>
+            <a class="header__nav-link" href="/profile">Профиль</a>
+        </nav>
+    </header>
+
+    <main class="home__main">
+        <div class="home__content">
+            <h1 class="home__heading" data-i18n="home.title">Современный сервис анализа и оценки на основе искусственного интеллекта</h1>
+            <p class="home__lead" data-i18n="home.lead">Загрузите макет в удобном формате, получите подробный и понятный отчёт</p>
+            <div class="home__actions">
+                <a class="btn btn--primary" href="/upload" data-i18n="home.upload">Загрузить изображение</a>
+                <a class="btn btn--ghost" href="/catalog" data-i18n="home.catalog">Каталог</a>
+            </div>
+        </div>
+
+        <div class="slider" data-slider data-delay="2500" aria-label="Витрина креативных макетов">
+            <div class="slider__track">
+                <div class="slider__slide is-active">
+                    <img src="/static/images/slide-1.png" alt="LASER WORLD OF PHOTONIC">
+                </div>
+                <div class="slider__slide">
+                    <img src="/static/images/slide-2.png" alt="BLOSH — Future Fashion">
+                </div>
+                <div class="slider__slide">
+                    <img src="/static/images/slide-3.png" alt="OUR WORKS — Midjourney Keywords">
+                </div>
+            </div>
+            <div class="slider__dots">
+                <button class="slider__dot is-active" type="button" data-i18n-aria-label="home.slider.1" aria-label="Слайд 1"></button>
+                <button class="slider__dot" type="button" data-i18n-aria-label="home.slider.2" aria-label="Слайд 2"></button>
+                <button class="slider__dot" type="button" data-i18n-aria-label="home.slider.3" aria-label="Слайд 3"></button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="/static/js/i18n.js?v=19"></script>
+<script src="/static/js/icons.js?v=19"></script>
+<script src="/static/js/app.js?v=19"></script>
+<script src="/static/js/slider.js?v=19"></script>
+</body>
+</html>
+
+

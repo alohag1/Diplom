@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Терем ок? — Анализ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=19">
+    <link rel="stylesheet" href="/static/css/base.css?v=19">
+    <link rel="stylesheet" href="/static/css/components.css?v=19">
+    <link rel="stylesheet" href="/static/css/pages.css?v=19">
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+</head>
+<body data-i18n-page-title="pageTitle.analyze">
+
+<div class="canvas page page--has-subheader analyze-page">
+    <header class="header">
+        <a class="header__logo" href="/home" aria-label="Терем ок?">
+            <img src="/static/images/logo.png?v=2" alt="Терем ок?">
+        </a>
+        <button class="header__toggle" type="button" data-i18n-aria-label="common.menu" aria-label="Меню" data-icon="menu"></button>
+        <nav class="header__nav" aria-label="Главная навигация">
+            <a class="header__nav-link" href="/upload">Загрузка изображений</a>
+            <a class="header__nav-link" href="/catalog">Каталог</a>
+            <a class="header__nav-link" href="/analyze">Анализ</a>
+            <a class="header__nav-link" href="/reports">Отчёты</a>
+            <a class="header__nav-link" href="/profile">Профиль</a>
+        </nav>
+    </header>
+
+    <div class="subheader">
+        <div class="subheader__inner">
+            <nav class="analyze-tabs" role="tablist" aria-label="Анализ">
+                <button type="button" class="analyze-tabs__btn" role="tab" data-analyze-tab="create" id="analyze-tab-create" aria-controls="analyze-panel-create" aria-selected="false">
+                    <span data-i18n="analyze.tab.create">Создать запрос</span>
+                </button>
+                <button type="button" class="analyze-tabs__btn is-active" role="tab" data-analyze-tab="requests" id="analyze-tab-requests" aria-controls="analyze-panel-requests" aria-selected="true">
+                    <span data-i18n="analyze.tab.requests">Мои запросы</span>
+                </button>
+                <button type="button" class="analyze-tabs__btn" role="tab" data-analyze-tab="results" id="analyze-tab-results" aria-controls="analyze-panel-results" aria-selected="false">
+                    <span data-i18n="analyze.tab.results">Результаты</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <div class="page__inner analyze-page__inner">
+
+        <section class="analyze-panel" id="analyze-panel-create" role="tabpanel" data-analyze-panel="create" aria-labelledby="analyze-tab-create" hidden>
+            <h1 class="section-title analyze-section-title" data-i18n="analyze.create.title">Новый запрос на анализ</h1>
+            <div class="analyze-create-grid">
+                <div class="analyze-create-col">
+                    <div class="analyze-card analyze-card--main">
+                        <div id="analyze-placeholder" class="analyze-placeholder">
+                            <span class="analyze-placeholder__icon" data-icon="analyzeHero"></span>
+                            <p class="analyze-placeholder__title" data-i18n="analyze.create.emptyTitle">Здесь пока нет анализа</p>
+                            <p class="analyze-placeholder__text" data-i18n="analyze.create.emptyText">Чтобы получить анализ изображения, загрузите новое изображение или выберите его из каталога.</p>
+                        </div>
+                        <div id="analyze-preview-wrap" class="analyze-preview-wrap is-hidden">
+                            <img id="analyze-preview-img" class="analyze-preview-img" src="" alt="">
+                        </div>
+                        <input type="file" id="analyze-file-input" class="sr-only" accept="image/*">
+                        <div class="analyze-create-buttons">
+                            <button type="button" class="btn btn--primary" id="btn-analyze-upload">
+                                <span class="btn__icon" data-icon="upload"></span>
+                                <span data-i18n="analyze.create.uploadBtn">Загрузить изображение</span>
+                            </button>
+                            <button type="button" class="btn btn--ghost" id="btn-analyze-catalog">
+                                <span class="btn__icon" data-icon="folder"></span>
+                                <span data-i18n="analyze.create.catalogBtn">Выбрать из каталога</span>
+                            </button>
+                        </div>
+                        <div id="analyze-picker" class="analyze-picker is-hidden">
+                            <div class="analyze-picker__head">
+                                <span data-i18n="analyze.create.pickerTitle">Каталог</span>
+                            </div>
+                            <div id="analyze-picker-grid" class="analyze-picker__grid"></div>
+                            <p id="analyze-picker-empty" class="analyze-picker__empty is-hidden" data-i18n="analyze.create.pickerEmpty">В каталоге нет изображений</p>
+                        </div>
+                    </div>
+                    <div class="analyze-submit-row">
+                        <button type="button" class="btn btn--primary btn--analyze-wide" id="btn-create-request" disabled>
+                            <span data-i18n="analyze.create.submit">Создать запрос</span>
+                        </button>
+                    </div>
+                </div>
+                <aside class="analyze-card analyze-card--aside">
+                    <p class="analyze-aside__lead" data-i18n="analyze.create.asideIntro">После создания запроса вы сможете запустить анализ и получить:</p>
+                    <ul class="analyze-aside__list">
+                        <li data-i18n="analyze.create.bullet1">Оценку рекламного креатива по 4 критериям</li>
+                        <li data-i18n="analyze.create.bullet2">Описание визуального стиля</li>
+                        <li data-i18n="analyze.create.bullet3">Рекомендации по улучшению</li>
+                        <li data-i18n="analyze.create.bullet4">Подробный отчёт в выбранном формате</li>
+                    </ul>
+                    <hr class="analyze-aside__rule">
+                    <h3 class="analyze-aside__sub" data-i18n="analyze.create.howTitle">Как работает анализ?</h3>
+                    <p class="analyze-aside__text" data-i18n="analyze.create.howText">ИИ анализирует композицию, цветовую палитру, баланс элементов и стиль.</p>
+                </aside>
+            </div>
+        </section>
+
+        <section class="analyze-panel is-active" id="analyze-panel-requests" role="tabpanel" data-analyze-panel="requests" aria-labelledby="analyze-tab-requests">
+            <h1 class="section-title analyze-section-title" data-i18n="analyze.requests.title">Список моих запросов</h1>
+            <div class="analyze-filters">
+                <div class="dropdown" id="dd-an-status" data-value="all">
+                    <button class="dropdown__toggle" type="button">
+                        <span class="dropdown__icon" data-icon="filter"></span>
+                        <span class="dropdown__label" data-i18n="analyze.status.all">Все статусы</span>
+                        <span class="dropdown__chevron" data-icon="chevron"></span>
+                    </button>
+                    <div class="dropdown__menu">
+                        <button type="button" class="dropdown__option is-active" data-value="all" data-i18n="analyze.status.all">Все статусы</button>
+                        <button type="button" class="dropdown__option" data-value="processing" data-i18n="analyze.status.processing">Выполняется</button>
+                        <button type="button" class="dropdown__option" data-value="completed" data-i18n="analyze.status.completed">Завершён</button>
+                        <button type="button" class="dropdown__option" data-value="failed" data-i18n="analyze.status.failed">Ошибка</button>
+                    </div>
+                </div>
+                <div class="dropdown" id="dd-an-date" data-value="all">
+                    <button class="dropdown__toggle" type="button">
+                        <span class="dropdown__icon" data-icon="calendar"></span>
+                        <span class="dropdown__label" data-i18n="analyze.filterDateAll">Все даты</span>
+                        <span class="dropdown__chevron" data-icon="chevron"></span>
+                    </button>
+                    <div class="dropdown__menu">
+                        <button type="button" class="dropdown__option is-active" data-value="all" data-i18n="analyze.filterDateAll">Все даты</button>
+                        <button type="button" class="dropdown__option" data-value="week" data-i18n="filter.week">За неделю</button>
+                        <button type="button" class="dropdown__option" data-value="month" data-i18n="filter.month">За месяц</button>
+                        <button type="button" class="dropdown__option" data-value="year" data-i18n="filter.year">Р—Р° РіРѕРґ</button>
+                    </div>
+                </div>
+            </div>
+            <div class="analyze-table-shell">
+                <table class="analyze-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="analyze.requests.colId">ID</th>
+                            <th data-i18n="analyze.requests.colPreview">Превью</th>
+                            <th data-i18n="analyze.requests.colDesc">Описание</th>
+                            <th data-i18n="analyze.requests.colDate">Дата</th>
+                            <th data-i18n="analyze.requests.colStatus">Статус</th>
+                            <th data-i18n="analyze.requests.colAction">Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analyze-tbody"></tbody>
+                </table>
+                <p id="analyze-requests-empty" class="analyze-empty is-hidden" data-i18n="analyze.requests.empty">Запросов пока нет</p>
+            </div>
+        </section>
+
+        <section class="analyze-panel" id="analyze-panel-results" role="tabpanel" data-analyze-panel="results" aria-labelledby="analyze-tab-results" hidden>
+            <h1 class="section-title analyze-section-title" data-i18n="analyze.results.title">Результаты анализа</h1>
+            <div class="analyze-results">
+                <aside class="analyze-results__sidebar">
+                    <h3 class="analyze-results__sidebar-title" data-i18n="analyze.results.sidebarTitle">Завершённые анализы</h3>
+                    <div id="analyze-results-list" class="analyze-results__list"></div>
+                    <p id="analyze-results-list-empty" class="analyze-empty is-hidden" data-i18n="analyze.results.noCompleted">Нет завершённых анализов</p>
+                </aside>
+                <div class="analyze-results__main">
+                    <div id="analyze-results-detail" class="analyze-results__detail is-hidden">
+                        <div class="analyze-results__preview">
+                            <img id="analyze-results-img" src="" alt="">
+                        </div>
+                        <div class="analyze-result-tabs-wrap">
+                            <div class="analyze-result-tabs" role="tablist">
+                                <button type="button" class="analyze-result-tabs__btn is-active" data-result-tab="criteria" data-i18n="analyze.results.tabCriteria">Критерии оценивания</button>
+                                <button type="button" class="analyze-result-tabs__btn" data-result-tab="description" data-i18n="analyze.results.tabDescription">Описание</button>
+                                <button type="button" class="analyze-result-tabs__btn" data-result-tab="recommendations" data-i18n="analyze.results.tabRecommendations">Рекомендации</button>
+                            </div>
+                            <div class="analyze-result-nav is-hidden" id="analyze-result-nav">
+                                <button type="button" class="analyze-result-nav__btn analyze-result-nav__btn--prev" id="analyze-result-prev" data-icon="chevronRight" data-i18n-aria-label="analyze.results.prevAria" aria-label="Предыдущий анализ"></button>
+                                <span class="analyze-result-nav__count" id="analyze-result-count">1 / 1</span>
+                                <button type="button" class="analyze-result-nav__btn analyze-result-nav__btn--next" id="analyze-result-next" data-icon="chevronRight" data-i18n-aria-label="analyze.results.nextAria" aria-label="Следующий анализ"></button>
+                            </div>
+                        </div>
+                        <div id="analyze-result-view" class="analyze-result-view"></div>
+                        <div class="analyze-results__footer">
+                            <button type="button" class="btn btn--primary btn--analyze-save" id="btn-save-analysis-report">
+                                <span class="btn__icon" data-icon="download"></span>
+                                <span data-i18n="analyze.results.saveReport">Сохранить отчёт</span>
+                            </button>
+                            <div class="dropdown analyze-export-dropdown" id="dd-an-export" data-value="pdf">
+                                <button class="dropdown__toggle" type="button">
+                                    <span class="dropdown__label" data-i18n="analyze.results.formatPdf">PDF</span>
+                                    <span class="dropdown__chevron" data-icon="chevron"></span>
+                                </button>
+                                <div class="dropdown__menu">
+                                    <button type="button" class="dropdown__option is-active" data-value="pdf" data-i18n="analyze.results.formatPdf">PDF</button>
+                                    <button type="button" class="dropdown__option" data-value="json" data-i18n="analyze.results.formatJson">JSON</button>
+                                    <button type="button" class="dropdown__option" data-value="txt" data-i18n="analyze.results.formatTxt">TXT</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="analyze-results-pick" class="analyze-results__pick">
+                        <p class="analyze-empty" data-i18n="analyze.results.pickPrompt">Выберите завершённый анализ слева</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="/static/js/i18n.js?v=19"></script>
+<script src="/static/js/icons.js?v=19"></script>
+<script src="/static/js/app.js?v=19"></script>
+<script src="/static/js/store.js?v=19"></script>
+<script src="/static/js/dropdown.js?v=19"></script>
+<script src="/static/js/dialog.js?v=19"></script>
+<script src="/static/js/analyze.js?v=19"></script>
+</body>
+</html>
+
+

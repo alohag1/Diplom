@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Терем ок? — Загрузка изображения</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=19">
+    <link rel="stylesheet" href="/static/css/base.css?v=19">
+    <link rel="stylesheet" href="/static/css/components.css?v=19">
+    <link rel="stylesheet" href="/static/css/pages.css?v=19">
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+</head>
+<body data-i18n-page-title="pageTitle.upload">
+
+<div class="canvas page">
+    <header class="header">
+        <a class="header__logo" href="/home" aria-label="Терем ок?">
+            <img src="/static/images/logo.png?v=2" alt="Терем ок?">
+        </a>
+        <button class="header__toggle" type="button" data-i18n-aria-label="common.menu" aria-label="Меню" data-icon="menu"></button>
+        <nav class="header__nav" aria-label="Главная навигация">
+            <a class="header__nav-link" href="/upload">Загрузка изображений</a>
+            <a class="header__nav-link" href="/catalog">Каталог</a>
+            <a class="header__nav-link" href="/analyze">Анализ</a>
+            <a class="header__nav-link" href="/reports">Отчёты</a>
+            <a class="header__nav-link" href="/profile">Профиль</a>
+        </nav>
+    </header>
+
+    <div class="page__inner">
+        <div class="upload">
+            <section class="upload__column">
+                <h1 class="upload__column-title" data-i18n="upload.pageTitle">Загрузить изображение</h1>
+
+                <label class="dropzone" id="dropzone" for="file-input">
+                    <span class="dropzone__icon" data-icon="upload"></span>
+                    <span class="dropzone__title" data-i18n="upload.dropzoneTitle">Перетащите изображение сюда</span>
+                    <span class="dropzone__hint" data-i18n="upload.dropzoneHint">или выберите файл с устройства</span>
+                    <button class="dropzone__btn" type="button" id="btn-pick" data-i18n="upload.pickFile">Выбрать файл</button>
+                    <input id="file-input" type="file" accept="image/*" class="sr-only">
+                </label>
+
+                <form class="metaform" id="meta-form" novalidate>
+                    <div class="field">
+                        <div class="field__head"><label for="meta-title"><span data-i18n="upload.fields.title">Название изображения</span></label></div>
+                        <div class="field__control">
+                            <input class="field__input" id="meta-title" name="title" type="text" data-i18n-placeholder="upload.placeholders.title" placeholder="Введите название">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="field__head"><label for="meta-author"><span data-i18n="upload.fields.author">Автор / Источник</span></label></div>
+                        <div class="field__control">
+                            <input class="field__input" id="meta-author" name="author" type="text" data-i18n-placeholder="upload.placeholders.author" placeholder="Введите автора">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="field__head"><label for="meta-tag"><span data-i18n="upload.fields.tags">Теги</span></label></div>
+                        <div class="metaform__row">
+                            <div class="field__control">
+                                <input class="field__input" id="meta-tag" name="tag" type="text" data-i18n-placeholder="upload.placeholders.tag" placeholder="Добавить тег">
+                            </div>
+                            <button class="metaform__add" type="button" id="btn-add-tag" data-i18n-aria-label="upload.addTagAria" aria-label="Добавить тег" data-icon="plus"></button>
+                        </div>
+                        <div class="card__tags" id="tag-list"></div>
+                    </div>
+
+                    <div class="field">
+                        <div class="field__head"><label for="meta-date"><span data-i18n="upload.fields.date">Дата создания</span></label></div>
+                        <div class="field__control">
+                            <span class="field__icon" data-icon="calendar"></span>
+                            <input class="field__input field__input--date" id="meta-date" name="date" type="date">
+                        </div>
+                    </div>
+
+                    <div class="field field--textarea">
+                        <div class="field__head"><label for="meta-desc"><span data-i18n="upload.fields.description">Описание / Комментарий</span></label></div>
+                        <div class="field__control">
+                            <textarea class="field__textarea" id="meta-desc" name="description" data-i18n-placeholder="upload.placeholders.description" placeholder="Добавьте описание"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section class="upload__column">
+                <h2 class="upload__column-title" data-i18n="upload.previewColumnTitle">Превью и информация</h2>
+                <div class="preview preview--empty" id="preview">
+                    Изображение появится здесь после выбора файла
+                </div>
+            </section>
+
+            <div class="upload__actions">
+                <button class="btn btn--primary" type="button" id="btn-submit" disabled data-i18n="upload.submit">Загрузить</button>
+                <button class="btn btn--cancel" type="button" id="btn-cancel" data-i18n="common.cancel">Отмена</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/i18n.js?v=19"></script>
+<script src="/static/js/icons.js?v=19"></script>
+<script src="/static/js/app.js?v=19"></script>
+<script src="/static/js/store.js?v=19"></script>
+<script src="/static/js/dialog.js?v=19"></script>
+<script src="/static/js/upload.js?v=19"></script>
+</body>
+</html>
+
+

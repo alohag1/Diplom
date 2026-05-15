@@ -1,0 +1,72 @@
+:root {
+    --color-bg-page: #1f1f1f;
+    --color-bg-welcome: #000000;
+    --color-bg-surface: #111111;
+    --color-bg-surface-2: #1a1a1a;
+    --color-bg-input: #0a0a0a;
+    --color-bg-header: #353435;
+    --color-bg-subheader: #111111;
+    --color-bg-card: #111111;
+
+    --color-text-cream: #fff1d0;
+    --color-text-light: rgba(255, 255, 255, 0.8);
+    --color-text-body: rgba(255, 255, 255, 0.6);
+    --color-text-muted: rgba(255, 255, 255, 0.6);
+    --color-text-mute-2: rgba(255, 255, 255, 0.45);
+    --color-text-dark: #1d1d1d;
+
+    --color-accent: #ffb51d;
+    --color-primary: #ffc857;
+    --color-primary-hover: #ffb51d;
+    --color-primary-soft: rgba(255, 200, 87, 0.25);
+    --color-white: #ffffff;
+    --color-white-60: rgba(255, 255, 255, 0.6);
+    --color-white-80: rgba(255, 255, 255, 0.8);
+    --color-white-12: rgba(255, 255, 255, 0.12);
+    --color-white-08: rgba(255, 255, 255, 0.08);
+
+    --color-wine: #600c25;
+    --color-wine-hover: #7a1530;
+    --color-wine-ghost: rgba(96, 12, 37, 0.8);
+    --color-danger: #e25555;
+    --color-success: #2ecc71;
+
+    --color-overlay: rgba(0, 0, 0, 0.7);
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-strong: rgba(255, 255, 255, 0.18);
+
+    --font-family: "Roboto", -apple-system, "Segoe UI", Arial, sans-serif;
+    --font-medium: 500;
+    --font-bold: 700;
+
+    --fs-h1: clamp(34px, 4.6vw, 70px);
+    --fs-h2: clamp(28px, 3.4vw, 50px);
+    --fs-h3: clamp(18px, 2.0vw, 35px);
+    --fs-h4: clamp(22px, 2.1vw, 32px);
+    --fs-button: clamp(15px, 1.4vw, 24px);
+    --fs-nav: clamp(14px, 1.1vw, 20px);
+    --fs-body: clamp(14px, 1.05vw, 18px);
+    --fs-small: clamp(12px, 0.85vw, 15px);
+
+    --radius-card: clamp(20px, 2.6vw, 50px);
+    --radius-modal: 32px;
+    --radius-button: 40px;
+    --radius-input: 10px;
+    --radius-image: 12px;
+    --radius-tag: 8px;
+
+    --header-height: clamp(110px, 10.5vw, 200px);
+    --content-x: clamp(20px, 4.8vw, 92px);
+    --section-y: clamp(40px, 5vw, 96px);
+
+    --container-max: 1920px;
+
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --transition-slow: 400ms ease;
+
+    --slider-delay: 2500ms;
+
+    --shadow-card: 0 14px 32px rgba(0, 0, 0, 0.35);
+    --shadow-elev: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
