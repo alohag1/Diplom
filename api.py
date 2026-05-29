@@ -203,7 +203,7 @@ def _render_html_report(result: DesignAnalysis, json_str: str) -> str:
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>Design AI Analyzer — Отчёт</title>
+    <title>Терем ок? — Отчёт</title>
     <style>
         body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0d0d1a; color: #e0e0e0; margin: 0; padding: 20px; }}
         .container {{ max-width: 800px; margin: 0 auto; }}
@@ -217,7 +217,7 @@ def _render_html_report(result: DesignAnalysis, json_str: str) -> str:
 </head>
 <body>
 <div class="container">
-    <h1>Design AI Analyzer</h1>
+    <h1>Терем ок?</h1>
     {type_line}
 
     <div class="overall">

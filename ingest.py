@@ -87,7 +87,7 @@ def _create_vectorstore(chunks: list) -> None:
 
 def main() -> None:
     print("=" * 60)
-    print("  Design AI Analyzer — Загрузка книг в базу знаний")
+    print("  Терем ок? — Загрузка книг в базу знаний")
     print("=" * 60)
 
     # Шаг 1: Поиск PDF-файлов

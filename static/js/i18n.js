@@ -253,7 +253,7 @@ const I18N = {
         "analyze.planOverlay.concurrentLimit": "На бесплатном тарифе можно запускать только один анализ одновременно. Перейдите на расширенный план.",
         "analyze.processing": "Выполняется анализ на сервере…",
         "analyze.errorDemo": "Сервер анализа недоступен. Показаны демонстрационные данные.",
-        "analyze.errorStaleScorer": "Сервер использует устаревший алгоритм оценки (версия {current}, нужна {expected}). Остановите старый процесс на порту 8000 и запустите заново: py api.py в папке design-ai-analyzer. Затем создайте новый запрос — старые результаты в списке не пересчитываются.",
+        "analyze.errorStaleScorer": "Сервер использует устаревший алгоритм оценки (версия {current}, нужна {expected}). Остановите старый процесс на порту 8000 и запустите заново: py api.py в папке проекта. Затем создайте новый запрос — старые результаты в списке не пересчитываются.",
         "analyze.errorStorage": "Не удалось сохранить результат анализа в браузере. Освободите место: удалите старые запросы или отчёты и попробуйте снова.",
 
         "criterion.typography": "Типографика",
@@ -704,7 +704,7 @@ const I18N = {
         "analyze.planOverlay.concurrentLimit": "On the free plan you can run only one analysis at a time. Upgrade for unlimited concurrent analyses.",
         "analyze.processing": "Running server-side analysis…",
         "analyze.errorDemo": "Analysis server unavailable. Showing demo data.",
-        "analyze.errorStaleScorer": "The server uses an outdated scoring algorithm (version {current}, expected {expected}). Stop the old process on port 8000 and restart: py api.py in design-ai-analyzer. Then create a new request — old results are not recalculated.",
+        "analyze.errorStaleScorer": "The server uses an outdated scoring algorithm (version {current}, expected {expected}). Stop the old process on port 8000 and restart: py api.py in the project folder. Then create a new request — old results are not recalculated.",
         "analyze.errorStorage": "Could not save the analysis result in your browser. Free up space by removing old requests or reports, then try again.",
 
         "criterion.typography": "Typography",
