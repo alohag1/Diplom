@@ -37,7 +37,7 @@ function _filter(items) {
 
     return items.filter((item) => {
         if (query) {
-            const haystack = [item.title, item.author, item.description]
+            const haystack = [item.title, item.author, item.description, item.creativeTypeLabel]
                 .filter(Boolean).join(" ").toLowerCase();
             if (!haystack.includes(query)) return false;
         }
@@ -56,18 +56,61 @@ function _filter(items) {
     });
 }
 
+function _resolveReportImage(item) {
+    if (window.Store && Store.resolveReportImage) return Store.resolveReportImage(item);
+    if (!item) return "";
+    if (item.image) return item.image;
+    if (item.uploadId) {
+        const upload = Store.findUpload(item.uploadId);
+        if (upload && upload.image) return upload.image;
+    }
+    if (item.analysisJobId && Store.resolveAnalysisImage) {
+        const job = Store.findAnalysisJob(item.analysisJobId);
+        if (job) return Store.resolveAnalysisImage(job);
+    }
+    return "";
+}
+
+function _resolveReportCreativeLabel(item, result) {
+    const typeKeys = {
+        poster: "analyze.create.typePoster",
+        website: "analyze.create.typeWebsite",
+        logo: "analyze.create.typeLogo",
+        mockup: "analyze.create.typeMockup",
+        banner: "analyze.create.typeBanner",
+        other: "analyze.create.typeOther",
+    };
+    if (item && item.creativeType) {
+        const key = typeKeys[item.creativeType];
+        return key ? _t(key) : item.creativeType;
+    }
+    if (item && item.creativeTypeLabel) return item.creativeTypeLabel;
+    if (result && result.creative_type) {
+        const key = typeKeys[result.creative_type];
+        return key ? _t(key) : result.creative_type;
+    }
+    if (result && result.creative_type_label) return result.creative_type_label;
+    return null;
+}
+
 function _renderCard(item) {
+    const imageSrc = _resolveReportImage(item);
+    const result = _findAnalysisFor(item);
+    const typeLabel = _resolveReportCreativeLabel(item, result);
+    const typeTag = typeLabel
+        ? `<span class="tag tag--creative">${_escape(typeLabel)}</span>`
+        : "";
     return `
         <article class="card card--report" data-id="${item.id}">
             <div class="card__media">
-                <img src="${item.image}" alt="${item.title}">
+                <img src="${imageSrc}" alt="${item.title}">
             </div>
             <div class="card__body">
                 <div class="card__head">
                     <h3 class="card__title">${item.title}</h3>
                     <span class="card__date">${item.date}</span>
                 </div>
-                <div class="card__tags"><span class="tag tag--type">${item.format || "PDF"}</span></div>
+                <div class="card__tags">${typeTag}<span class="tag tag--type">${item.format || "PDF"}</span></div>
                 <div class="report-meta">
                     <span class="card__author">${_t("reports.size")} ${Store.formatBytes(item.size)}</span>
                 </div>
@@ -83,70 +126,28 @@ function _renderCard(item) {
 }
 
 function _togglePagerBar(show) {
-    const bar = document.getElementById("filter-bar-pager");
+    const bar = document.getElementById("reports-pager");
     if (bar) bar.classList.toggle("is-hidden", !show);
 }
 
 function _renderPagination(total) {
     const wrap = _$("pagination");
-    if (!wrap) return;
-    const pages = Math.max(1, Math.ceil(total / REP_STATE.pageSize));
-    wrap.setAttribute("aria-label", _t("pagination.pagesAria"));
-    if (total === 0 || pages <= 1) {
-        wrap.innerHTML = "";
-        _togglePagerBar(false);
-        return;
-    }
-
-    _togglePagerBar(true);
-    const cur = REP_STATE.page;
-    const valLabel = _t("pagination.pageOf", { current: cur, total: pages });
-
-    wrap.innerHTML = `
-        <button type="button" class="pagination__edge" data-page="prev" ${cur <= 1 ? "disabled" : ""}>${_t("pagination.prev")}</button>
-        <div class="pagination__pages">
-            <input type="range" class="pagination__slider" id="rep-page-slider" min="1" max="${pages}" step="1" value="${cur}">
-            <div class="pagination__slider-val" id="rep-page-slider-val">${valLabel}</div>
-        </div>
-        <button type="button" class="pagination__edge" data-page="next" ${cur >= pages ? "disabled" : ""}>${_t("pagination.next")}</button>`;
-
-    const slider = wrap.querySelector("#rep-page-slider");
-    const valEl = wrap.querySelector("#rep-page-slider-val");
-
-    function _syncSliderUi(p) {
-        const safe = Math.min(Math.max(1, p), pages);
-        const v = _t("pagination.pageOf", { current: safe, total: pages });
-        const a = _t("pagination.sliderAria", { current: safe, total: pages });
-        if (valEl) valEl.textContent = v;
-        if (slider) {
-            slider.value = String(safe);
-            slider.setAttribute("aria-label", a);
-            slider.setAttribute("aria-valuemin", "1");
-            slider.setAttribute("aria-valuemax", String(pages));
-            slider.setAttribute("aria-valuenow", String(safe));
-            slider.setAttribute("aria-valuetext", a);
-        }
-    }
-
-    if (slider) {
-        slider.addEventListener("input", () => {
-            _syncSliderUi(Number(slider.value));
-        });
-        slider.addEventListener("change", () => {
-            REP_STATE.page = Number(slider.value);
+    if (!wrap || !window.TeremPagination) return;
+    window.TeremPagination.renderNumberPagination({
+        wrap,
+        current: REP_STATE.page,
+        totalItems: total,
+        pageSize: REP_STATE.pageSize,
+        onChange(page) {
+            REP_STATE.page = page;
             _render();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-    }
-
-    wrap.querySelectorAll("[data-page]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const target = btn.dataset.page;
-            if (target === "prev") REP_STATE.page = Math.max(1, REP_STATE.page - 1);
-            else if (target === "next") REP_STATE.page = Math.min(pages, REP_STATE.page + 1);
-            _render();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
+            const pager = _$("reports-pager");
+            if (pager) {
+                pager.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+        },
+        onHide: () => _togglePagerBar(false),
+        onShow: () => _togglePagerBar(true),
     });
 }
 
@@ -188,7 +189,7 @@ function _render() {
             placeholder.id = "filter-empty";
             grid.parentNode.insertBefore(placeholder, grid);
         }
-        placeholder.innerHTML = `<div class="empty"><span class="empty__icon" data-icon="info"></span>
+        placeholder.innerHTML = `<div class="empty empty--plain"><span class="empty__icon" data-icon="info"></span>
             <h2 class="empty__title">${_t("reports.filterEmpty.title")}</h2>
             <p class="empty__text">${_t("reports.filterEmpty.text")}</p></div>`;
         if (window.Icons) window.Icons.inject(placeholder);
@@ -244,6 +245,7 @@ const HIDDEN_REPORT_SECTIONS = [
     "распределение активности по зонам",
     "распределение активности",
     "доминирующие цвета",
+    "примечание",
 ];
 
 function _isHiddenReportSection(title) {
@@ -304,6 +306,8 @@ function _reportToText(item, result) {
     lines.push("");
     lines.push(`Креатив: ${title}`);
     lines.push(`Дата:    ${date}`);
+    const typeLabel = _resolveReportCreativeLabel(item, result);
+    if (typeLabel) lines.push(`Тип:     ${typeLabel}`);
     if (item.author && item.author !== "—") lines.push(`Автор:   ${item.author}`);
     lines.push("");
 
@@ -367,6 +371,7 @@ function _reportToPrintableHtml(item, result) {
     const r = result || {};
     const title = _escape(item.title || "Отчёт");
     const date = item.date || (Store && Store.formatDate(item.createdAt)) || "";
+    const typeLabel = _resolveReportCreativeLabel(item, result);
     const sections = _parseSections(r.image_description);
     const crit = _sortCriteriaList(r.criteria);
     const previewSrc = item.image ? _escape(item.image) : "";
@@ -424,6 +429,7 @@ body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color:
 .header__brand { font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: #1a1a1a; }
 .header__date { color: #1a1a1a; font-size: 13px; }
 h1 { margin: 6px 0 18px; font-size: 28px; line-height: 1.2; color: #1a1a1a; }
+.creative-type { margin: -8px 0 18px; font-size: 15px; color: #1a1a1a; }
 .preview img { max-width: 280px; max-height: 220px; border-radius: 10px; border: 1px solid #e5e5e5; display: block; margin-bottom: 22px; }
 h2 { margin: 28px 0 12px; font-size: 18px; padding-bottom: 6px; border-bottom: 1px solid #e5e5e5; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.04em; }
 .section { margin: 12px 0; }
@@ -453,6 +459,7 @@ h2 { margin: 28px 0 12px; font-size: 18px; padding-bottom: 6px; border-bottom: 1
     <div class="header__date">${_escape(date)}</div>
 </div>
 <h1>${title}</h1>
+${typeLabel ? `<p class="creative-type"><strong>Тип креатива:</strong> ${_escape(typeLabel)}</p>` : ""}
 ${previewSrc ? `<div class="preview"><img src="${previewSrc}" alt=""></div>` : ""}
 ${sections.length ? `<h2>Описание креатива</h2>${sectionsHtml}` : ""}
 ${issuesHtml ? `<h2>Основные проблемы</h2><ul class="issues">${issuesHtml}</ul>` : ""}
@@ -487,6 +494,8 @@ function _reportToJson(item, result) {
             title: item.title || "",
             author: item.author || null,
             created_at: item.createdAt || null,
+            type: item.creativeType || (result && result.creative_type) || null,
+            type_label: _resolveReportCreativeLabel(item, result),
         },
         overall: {
             score: r.overall_score != null ? r.overall_score : null,
@@ -625,6 +634,19 @@ function _findAnalysisFor(report) {
 
 const REPORT_CRITERION_ORDER = ["typography", "color", "hierarchy", "composition"];
 
+const CRITERION_LABEL_KEY = {
+    typography: "criterion.typography",
+    color: "criterion.color",
+    hierarchy: "criterion.hierarchy",
+    composition: "criterion.composition",
+};
+
+function _criterionDisplayName(criterion) {
+    const id = String((criterion && criterion.id) || "").toLowerCase();
+    const key = CRITERION_LABEL_KEY[id];
+    return key ? _t(key) : String((criterion && criterion.name) || id);
+}
+
 function _sortCriteriaList(list) {
     const arr = Array.isArray(list) ? list.slice() : [];
     const rank = (c) => {
@@ -647,7 +669,7 @@ function _renderViewerCriteria(result) {
             return `
                 <div class="report-viewer__criterion">
                     <div class="report-viewer__criterion-head">
-                        <span class="report-viewer__criterion-name">${_escape(c.name)}</span>
+                        <span class="report-viewer__criterion-name">${_escape(_criterionDisplayName(c))}</span>
                         <span class="report-viewer__criterion-score" style="color:${color}">${score} / 5</span>
                     </div>
                     <div class="report-viewer__bar"><span style="width:${pct}%;background:${color}"></span></div>
@@ -669,7 +691,7 @@ function _renderViewerRecommendations(result) {
                 .join("");
             if (!recs) return "";
             return `<div class="report-viewer__rec-group">
-                <div class="report-viewer__rec-title">${_escape(c.name)}</div>
+                <div class="report-viewer__rec-title">${_escape(_criterionDisplayName(c))}</div>
                 <ul class="report-viewer__rec-list">${recs}</ul>
             </div>`;
         })
@@ -698,9 +720,14 @@ function _openReportViewer(item) {
     const sizeStr = window.Store ? window.Store.formatBytes(item.size) : "—";
     const format = item.format || "—";
     const author = item.author && item.author !== "—" ? item.author : null;
+    const typeLabel = _resolveReportCreativeLabel(item, result);
 
     const stats = `
         <div class="report-viewer__stats">
+            ${typeLabel ? `<div class="report-viewer__stat">
+                <span class="report-viewer__stat-label">${_t("reports.creativeType")}</span>
+                <span class="report-viewer__stat-value">${_escape(typeLabel)}</span>
+            </div>` : ""}
             <div class="report-viewer__stat">
                 <span class="report-viewer__stat-label">${_t("upload.preview.format")}</span>
                 <span class="report-viewer__stat-value">${_escape(format)}</span>
@@ -740,7 +767,7 @@ function _openReportViewer(item) {
     panel.innerHTML = `
         <button class="report-viewer__close" type="button" data-viewer-close aria-label="${_t("common.close")}" data-icon="close"></button>
         <div class="report-viewer__hero">
-            <img src="${item.image || ""}" alt="${_escape(item.title || "")}">
+            <img src="${_resolveReportImage(item)}" alt="${_escape(item.title || "")}">
         </div>
         <div class="report-viewer__head">
             <h2 class="report-viewer__title">${_escape(item.title || "—")}</h2>
@@ -869,8 +896,12 @@ function _initFilters() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    _initFilters();
-    _render();
+    const boot = () => {
+        _initFilters();
+        _render();
+    };
+    if (window.Store && Store.ready) Store.ready.then(boot);
+    else boot();
 });
 
 document.addEventListener("i18n:change", () => {

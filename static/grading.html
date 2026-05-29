@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Терем ок? — Система оценок</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=24">
+    <link rel="stylesheet" href="/static/css/base.css?v=24">
+    <link rel="stylesheet" href="/static/css/components.css?v=24">
+    <link rel="stylesheet" href="/static/css/pages.css?v=27">
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+</head>
+<body data-i18n-page-title="pageTitle.grading">
+
+<div class="canvas page grading-page">
+    <header class="header">
+        <a class="header__logo" href="/home" aria-label="Терем ок?">
+            <img src="/static/images/logo.png?v=2" alt="Терем ок?">
+        </a>
+        <button class="header__toggle" type="button" data-i18n-aria-label="common.menu" aria-label="Меню" data-icon="menu"></button>
+        <nav class="header__nav" aria-label="Главная навигация">
+            <a class="header__nav-link" href="/upload">Загрузка изображений</a>
+            <a class="header__nav-link" href="/catalog">Каталог</a>
+            <a class="header__nav-link is-active" href="/analyze">Анализ</a>
+            <a class="header__nav-link" href="/reports">Отчёты</a>
+            <a class="header__nav-link" href="/profile">Профиль</a>
+        </nav>
+    </header>
+
+    <div class="page__inner grading-page__inner">
+        <div class="grading-head">
+            <a class="grading-back" id="grading-back" href="/analyze?tab=results">
+                <span class="grading-back__icon" data-icon="chevronRight"></span>
+                <span data-i18n="grading.back">Назад к результатам</span>
+            </a>
+            <h1 class="grading-head__title" data-i18n="grading.title">Система оценок</h1>
+            <p class="grading-head__intro" id="grading-intro"></p>
+        </div>
+
+        <div class="grading-criteria-tabs" id="grading-criteria-tabs" role="tablist" data-i18n-aria-label="grading.criteriaAria" aria-label="Критерии"></div>
+
+        <div class="grading-panel" id="grading-panel" role="tabpanel"></div>
+
+        <details class="grading-sources" id="grading-sources">
+            <summary class="grading-sources__toggle" data-i18n="grading.sourcesToggle">Источники и база знаний</summary>
+            <ul class="grading-sources__list" id="grading-sources-list"></ul>
+        </details>
+    </div>
+</div>
+
+<script src="/static/js/i18n.js?v=27"></script>
+<script src="/static/js/icons.js?v=24"></script>
+<script src="/static/js/app.js?v=24"></script>
+<script src="/static/js/grading.js?v=27"></script>
+</body>
+</html>

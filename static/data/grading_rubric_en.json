@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "scale": {
+    "min": 0,
+    "max": 5,
+    "intro": "Each criterion is scored on a scale from 0 to 5. The higher the score, the better the creative aligns with professional standards. Descriptions are based on knowledge-base rules and thresholds used in automated analysis."
+  },
+  "sources": [
+    { "id": "felici", "short": "Felici", "title": "J. Felici, Typography: Type, Layout, and Design" },
+    { "id": "bringhurst", "short": "Bringhurst", "title": "R. Bringhurst, The Elements of Typographic Style" },
+    { "id": "stone", "short": "Stone", "title": "T. Stone et al., Color Design Workbook" },
+    { "id": "makarova", "short": "Makarova", "title": "T. Makarova, N. Samsonova, The Role of Color in Advertising Imagery" },
+    { "id": "muller", "short": "Müller-Brockmann", "title": "J. Müller-Brockmann, Grid Systems in Graphic Design" },
+    { "id": "krug", "short": "Krug", "title": "S. Krug, Don't Make Me Think" }
+  ],
+  "criteria": [
+    {
+      "id": "typography",
+      "name": "Typography",
+      "icon": "typography",
+      "levels": [
+        {
+          "score": 0,
+          "title": "Absent",
+          "description": "The layout has no text, or typography does not serve a communicative function: labels are decorative and illegible, or text is missing where the brief requires it."
+        },
+        {
+          "score": 1,
+          "title": "Critical",
+          "description": "Text-to-background contrast is below 3:1, type size is too small for the display channel, or more than three typefaces are used without a system. Text is hard to read at a glance."
+        },
+        {
+          "score": 2,
+          "title": "Poor",
+          "description": "Weak contrast, no clear size hierarchy (less than 1.5× difference), excessive or insufficient line spacing. Typefaces clash in character."
+        },
+        {
+          "score": 3,
+          "title": "Satisfactory",
+          "description": "Text is readable on close inspection. Moderate contrast, basic headline/body hierarchy exists, but without precise typographic discipline."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "Contrast ≥ 4.5:1, one to two typefaces, clear hierarchy of sizes and weights. Letter-spacing and line spacing are aligned with text volume."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "Typography is built on a modular grid: high contrast, hierarchy is instantly clear, the type pairing is harmonious, and text reads easily on the target medium."
+        }
+      ],
+      "sourceIds": ["felici", "bringhurst"]
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "icon": "palette",
+      "levels": [
+        {
+          "score": 0,
+          "title": "Absent",
+          "description": "Color is not used meaningfully: random palette, no link to brand or brief, monochrome without accents where they are needed."
+        },
+        {
+          "score": 1,
+          "title": "Critical",
+          "description": "More than six dominant colors, saturation > 75% without balance, mixed harmony—the palette looks chaotic and fatiguing."
+        },
+        {
+          "score": 2,
+          "title": "Poor",
+          "description": "Palette is washed out (saturation < 15%) or excessively loud. Colors are not coordinated on the Itten wheel, no functional accent."
+        },
+        {
+          "score": 3,
+          "title": "Satisfactory",
+          "description": "Two to four main colors, analogous or neutral palette. Medium saturation. An accent exists, but its role is not always obvious."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "Complementary or triadic harmony, saturation 30–60%, each color has a role (background, text, CTA). Palette fits the advertising context."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "Palette is refined: harmonious Itten-based combination, color semantics support the brand message, accent guides attention without overload."
+        }
+      ],
+      "sourceIds": ["stone", "makarova"]
+    },
+    {
+      "id": "hierarchy",
+      "name": "Visual hierarchy",
+      "icon": "hierarchy",
+      "levels": [
+        {
+          "score": 0,
+          "title": "Absent",
+          "description": "All elements are equal in weight: no primary message, the eye finds no entry point, the layout reads as noise."
+        },
+        {
+          "score": 1,
+          "title": "Critical",
+          "description": "No focus: zone activity is even (focus ratio < 1.2), contrast is low, the headline is not distinguished by size or color."
+        },
+        {
+          "score": 2,
+          "title": "Poor",
+          "description": "Weak focus, several elements compete for attention. Not enough whitespace around key blocks."
+        },
+        {
+          "score": 3,
+          "title": "Satisfactory",
+          "description": "A main element exists, but secondary items are not differentiated by contrast and size. Reading order takes effort."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "Clear visual anchor (focus ratio ≥ 2), contrast supports priorities. Headline → image → body read in sequence."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "Hierarchy is built through size, contrast, color, and space. The eye path is natural; the CTA is noticeable without aggression."
+        }
+      ],
+      "sourceIds": ["muller", "krug"]
+    },
+    {
+      "id": "composition",
+      "name": "Composition",
+      "icon": "composition",
+      "levels": [
+        {
+          "score": 0,
+          "title": "Absent",
+          "description": "Elements are scattered without structure: no grid, balance, or placement logic; the layout looks accidental."
+        },
+        {
+          "score": 1,
+          "title": "Critical",
+          "description": "Strong imbalance (brightness difference between halves > 25%), zone overload, basic proportions and margins violated."
+        },
+        {
+          "score": 2,
+          "title": "Poor",
+          "description": "Moderate imbalance (10–25), elements stick to edges, rule of thirds unused, no rhythm."
+        },
+        {
+          "score": 3,
+          "title": "Satisfactory",
+          "description": "Balance is acceptable (< 10), but composition is generic. Basic alignment exists, yet no expressive center."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "Balanced composition using rule of thirds or modular grid. Active zones are distributed purposefully; frame proportions fit."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "Composition guides the eye; balance is symmetric or asymmetric by intent. Elements align to a modular system."
+        }
+      ],
+      "sourceIds": ["muller", "krug"]
+    }
+  ]
+}

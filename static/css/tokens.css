@@ -55,7 +55,7 @@
     --radius-image: 12px;
     --radius-tag: 8px;
 
-    --header-height: clamp(110px, 10.5vw, 200px);
+    --header-height: clamp(84px, 8vw, 156px);
     --content-x: clamp(20px, 4.8vw, 92px);
     --section-y: clamp(40px, 5vw, 96px);
 

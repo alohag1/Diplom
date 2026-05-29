@@ -1,0 +1,122 @@
+{
+  "version": 3,
+  "scale": {
+    "min": 0,
+    "max": 5,
+    "intro": "How easy is the text to read on the layout: is the headline visible, does text blend into the background, are there too many different fonts? If you are not a designer, ask yourself: “Can I read the main message in a couple of seconds?” This page explains scores from 0 to 5 for each criterion. The higher the score, the better the layout."
+  },
+  "sources": [
+    { "id": "felici", "short": "Felici", "title": "J. Felici, Typography: Type, Layout, and Design" },
+    { "id": "bringhurst", "short": "Bringhurst", "title": "R. Bringhurst, The Elements of Typographic Style" },
+    { "id": "stone", "short": "Stone", "title": "T. Stone et al., Color Design Workbook" },
+    { "id": "makarova", "short": "Makarova", "title": "T. Makarova, N. Samsonova, The Role of Color in Advertising Imagery" },
+    { "id": "muller", "short": "Müller-Brockmann", "title": "J. Müller-Brockmann, Grid Systems in Graphic Design" },
+    { "id": "krug", "short": "Krug", "title": "S. Krug, Don't Make Me Think" }
+  ],
+  "criteria": [
+    {
+      "id": "typography",
+      "name": "Typography",
+      "icon": "typography",
+      "levels": [
+        { "score": 0, "title": "Absent", "description": "No text, or labels are random letters and decoration with no meaning. Where words are needed, they are missing." },
+        { "score": 1, "title": "Critical", "description": "Text is physically unreadable: it blends into the background, is too small, or uses three or more fonts with no system." },
+        { "score": 2, "title": "Poor", "description": "Readable, but not at a glance: the headline barely differs from body text, lines are too tight or too loose, fonts clash." },
+        {
+          "score": 3,
+          "title": "Fair",
+          "description": "Text is readable if you look closely. Headline and body are distinguishable, but polish is missing — some spots are too small or low-contrast."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "Text reads at a glance. The headline is clearly larger, one or two fonts are used, letters do not get lost on the background. Everything looks tidy and clear."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "At first glance it is obvious what matters most. Fonts work together, text is easy to read on screen or in print, typography supports the message instead of fighting it."
+        }
+      ],
+      "sourceIds": ["felici", "bringhurst"]
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "icon": "palette",
+      "levels": [
+        { "score": 0, "title": "Absent", "description": "Color does nothing for the task: the whole layout is one dull or random tone with no accents. Colors are not tied to the brand and do not show what matters." },
+        { "score": 1, "title": "Critical", "description": "Overload: many bright, clashing colors at once — every block shouts on its own. The eye gets tired; it is unclear what to look at first." },
+        { "score": 2, "title": "Poor", "description": "Few colors, but they do not help: the image is gray and dull, or two–three shades clash. There is no clear accent color for a button, headline, or main message." },
+        {
+          "score": 3,
+          "title": "Fair",
+          "description": "Not too many colors; acceptable to look at. There is some accent, but its role is not always obvious — the most important part is not instantly clear."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "A calm, clear palette: background, text, and accent color work together. Brightness is moderate; colors help highlight what matters."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "Colors work as a team: each has a role, combinations are pleasing, accents guide attention without overload. The palette supports the brand mood and message."
+        }
+      ],
+      "sourceIds": ["stone", "makarova"]
+    },
+    {
+      "id": "hierarchy",
+      "name": "Visual hierarchy",
+      "icon": "hierarchy",
+      "levels": [
+        { "score": 0, "title": "Absent", "description": "Everything looks equally important: headline, images, and small text share the same size and weight. No hint where to start looking." },
+        { "score": 1, "title": "Critical", "description": "There should be a main message, but it is invisible: the headline is lost among images and decoration; all blocks are equally loud." },
+        { "score": 2, "title": "Poor", "description": "A main element exists, but secondary parts overpower it: bright images nearby, too many small details, little free space around the key block." },
+        {
+          "score": 3,
+          "title": "Fair",
+          "description": "The main element can be found, but you need a moment to search. Secondary details are still too loud — reading order is not obvious."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "The main thing is clear at once: headline or key image stands out by size, color, or contrast. The eye then moves naturally to details."
+        },
+        { "score": 5, "title": "Excellent", "description": "It is instantly clear what matters most and what you can skip. The button or key block is visible but not annoying. The eye moves calmly from the main point to details — no confusion or extra effort." },
+      ],
+      "sourceIds": ["muller", "krug"]
+    },
+    {
+      "id": "composition",
+      "name": "Composition",
+      "icon": "composition",
+      "levels": [
+        {
+          "score": 0,
+          "title": "Absent",
+          "description": "Elements are scattered without logic: no alignment, everything floats, the layout looks like a random pile of images and text."
+        },
+        { "score": 1, "title": "Critical", "description": "The layout breaks: blocks overlap, content is pressed to the edges with no margins, one half of the screen is empty while the other is packed tight." },
+        { "score": 2, "title": "Poor", "description": "No overlaps, but the layout is crooked: more material on one side, elements not aligned, margins either huge or almost zero — everything looks uneven." },
+        {
+          "score": 3,
+          "title": "Fair",
+          "description": "Mostly even, but without character. Basic alignment exists, yet the layout feels template-like — no strong visual center."
+        },
+        {
+          "score": 4,
+          "title": "Good",
+          "description": "Balanced layout: elements sit in the right places, margins at the edges, main blocks placed logically. The image looks assembled."
+        },
+        {
+          "score": 5,
+          "title": "Excellent",
+          "description": "Composition guides the eye and looks professional: balance is intentional, proportions fit, elements follow a clear structure — as if drawn with a ruler."
+        }
+      ],
+      "sourceIds": ["muller", "krug"]
+    }
+  ]
+}

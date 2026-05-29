@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from config import UPLOADS_DIR, API_PORT, CATEGORIES, BASE_DIR
+from config import UPLOADS_DIR, API_PORT, CATEGORIES, BASE_DIR, SCORER_VERSION
 from models import DesignAnalysis, AnalysisRequest
 from agents import DesignAnalyzer
 
@@ -60,9 +60,12 @@ PAGES = {
     "/upload": "upload.html",
     "/catalog": "catalog.html",
     "/analyze": "analyze.html",
+    "/grading": "grading.html",
     "/reports": "reports.html",
     "/profile": "profile.html",
 }
+
+GRADING_RUBRIC_PATH = BASE_DIR / "data" / "grading_rubric.json"
 
 
 def _page_response(filename: str) -> FileResponse:
@@ -92,6 +95,26 @@ async def catalog_page() -> FileResponse:
 @app.get("/analyze", response_class=HTMLResponse)
 async def analyze_page() -> FileResponse:
     return _page_response(PAGES["/analyze"])
+
+
+@app.get("/grading", response_class=HTMLResponse)
+async def grading_page() -> FileResponse:
+    return _page_response(PAGES["/grading"])
+
+
+@app.get("/api/grading-rubric")
+async def grading_rubric(lang: str = "ru") -> JSONResponse:
+    """Шкала оценок по критериям — датасет для экрана «Система оценок»."""
+    lang_norm = (lang or "ru").strip().lower()
+    if lang_norm.startswith("en"):
+        path = BASE_DIR / "data" / "grading_rubric_en.json"
+    else:
+        path = GRADING_RUBRIC_PATH
+    if not path.is_file():
+        path = GRADING_RUBRIC_PATH
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Grading rubric not found")
+    return JSONResponse(content=json.loads(path.read_text(encoding="utf-8")))
 
 
 @app.get("/reports", response_class=HTMLResponse)
@@ -124,6 +147,7 @@ async def health() -> dict:
     return {
         "status": "ok",
         "agents_ready": analyzer is not None,
+        "scorer_version": SCORER_VERSION,
         "ingest_status": ingest_status,
     }
 
@@ -166,6 +190,12 @@ def _render_html_report(result: DesignAnalysis, json_str: str) -> str:
 
     overall_color = _score_color(round(result.overall_score))
     overall_pct = result.overall_score / 5 * 100
+    type_line = ""
+    if result.creative_type_label:
+        type_line = (
+            f'<p style="color:#e0a020;font-weight:600;margin:0 0 12px 0">'
+            f'Тип креатива: {result.creative_type_label}</p>'
+        )
 
     json_escaped = json_str.replace("</", "<\\/")
 
@@ -188,6 +218,7 @@ def _render_html_report(result: DesignAnalysis, json_str: str) -> str:
 <body>
 <div class="container">
     <h1>Design AI Analyzer</h1>
+    {type_line}
 
     <div class="overall">
         <div style="color:#888;margin-bottom:8px">Общая оценка</div>
@@ -266,7 +297,12 @@ async def analyze_base64(request: AnalysisRequest) -> DesignAnalysis:
         raise HTTPException(400, "Поле image_base64 обязательно")
 
     try:
-        return _ensure_analyzer().analyze_base64(request.image_base64, category=None)
+        return _ensure_analyzer().analyze_base64(
+            request.image_base64,
+            category=None,
+            creative_type=request.creative_type,
+            user_description=request.description,
+        )
     except Exception as e:
         raise HTTPException(500, f"Ошибка анализа: {e}")
 
@@ -305,4 +341,4 @@ if __name__ == "__main__":
     print(f"  Сайт:         http://localhost:{API_PORT}/", flush=True)
     print(f"  Документация: http://localhost:{API_PORT}/docs", flush=True)
     print(f"{'='*60}\n", flush=True)
-    uvicorn.run(app, host="0.0.0.0", port=API_PORT)
+    uvicorn.run("api:app", host="0.0.0.0", port=API_PORT, reload=True)

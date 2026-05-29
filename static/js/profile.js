@@ -70,6 +70,11 @@ function _getReportScore(report) {
     return null;
 }
 
+function _analysisHrefForReport(report) {
+    if (!report || !window.Store || !Store.getAnalysisHrefForReport) return "/reports";
+    return Store.getAnalysisHrefForReport(report);
+}
+
 function _renderStats(reports) {
     const week = 7 * 86_400_000;
     const now = Date.now();
@@ -155,10 +160,17 @@ function _renderRecentPage() {
                 : "";
             const date = r.date || (window.Store && window.Store.formatDate(r.createdAt)) || "";
             const sub = r.description || r.author || "—";
+            const href = _analysisHrefForReport(r);
+            const thumb = window.Store && Store.resolveReportImage
+                ? Store.resolveReportImage(r)
+                : (r.image || "");
+            const mediaHtml = thumb
+                ? `<img src="${thumb}" alt="${(r.title || "").replace(/"/g, "&quot;")}">`
+                : `<div class="profile-recent__media-placeholder"></div>`;
             return `
-                <li class="profile-recent__item">
+                <li class="profile-recent__item profile-recent__item--link" role="link" tabindex="0" data-href="${href}">
                     <div class="profile-recent__media">
-                        <img src="${r.image || ""}" alt="${r.title || ""}">
+                        ${mediaHtml}
                     </div>
                     <div>
                         <div class="profile-recent__title">${r.title || "—"}</div>
@@ -174,14 +186,43 @@ function _renderRecentPage() {
 
     if (window.Icons) window.Icons.inject(list);
 
+    list.querySelectorAll(".profile-recent__item--link").forEach((row) => {
+        const go = () => {
+            const href = row.getAttribute("data-href");
+            if (href) window.location.href = href;
+        };
+        row.addEventListener("click", go);
+        row.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                go();
+            }
+        });
+    });
+
     if (pages > 1) {
+        const cur = PROFILE_STATE.page;
         pager.classList.remove("is-hidden");
-        pager.innerHTML = Array.from({ length: pages }, (_, i) =>
-            `<button class="profile-recent__dot ${i === PROFILE_STATE.page ? "is-active" : ""}" type="button" data-dot="${i}" aria-label="${_t("profile.recent.page", { n: i + 1 })}"></button>`,
+        const dotsHtml = Array.from({ length: pages }, (_, i) =>
+            `<button class="profile-recent__dot ${i === cur ? "is-active" : ""}" type="button" data-dot="${i}" aria-label="${_t("profile.recent.page", { n: i + 1 })}"></button>`,
         ).join("");
+        pager.innerHTML = `
+            <button type="button" class="profile-recent__nav profile-recent__nav--prev" data-recent-nav="prev"${cur <= 0 ? " disabled" : ""} data-icon="chevronRight" aria-label="${_t("pagination.prev")}"></button>
+            <div class="profile-recent__dots" role="group">${dotsHtml}</div>
+            <button type="button" class="profile-recent__nav profile-recent__nav--next" data-recent-nav="next"${cur >= pages - 1 ? " disabled" : ""} data-icon="chevronRight" aria-label="${_t("pagination.next")}"></button>`;
+        if (window.Icons) window.Icons.inject(pager);
         pager.querySelectorAll("[data-dot]").forEach((dot) => {
             dot.addEventListener("click", () => {
                 PROFILE_STATE.page = Number(dot.dataset.dot) || 0;
+                _renderRecentPage();
+            });
+        });
+        pager.querySelectorAll("[data-recent-nav]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                if (btn.disabled) return;
+                const dir = btn.getAttribute("data-recent-nav");
+                if (dir === "prev") PROFILE_STATE.page = Math.max(0, PROFILE_STATE.page - 1);
+                else if (dir === "next") PROFILE_STATE.page = Math.min(pages - 1, PROFILE_STATE.page + 1);
                 _renderRecentPage();
             });
         });
@@ -197,6 +238,60 @@ function _renderOverview() {
     PROFILE_STATE.page = 0;
     _renderStats(reports);
     _renderRecentPage();
+    _renderCurrentPlanCard();
+}
+
+function _renderCurrentPlanCard() {
+    if (!window.Store || !Store.getPlan) return;
+    const plan = Store.getPlan();
+    const nameEl = document.getElementById("profile-plan-name");
+    const subEl = document.getElementById("profile-plan-sub");
+    const nameKey = plan === "basic" ? "subs.basic" : plan === "pro" ? "subs.pro" : "profile.plan.free";
+    const subKey =
+        plan === "basic" ? "subs.basic.sub" : plan === "pro" ? "subs.pro.sub" : "profile.plan.freeSub";
+    if (nameEl) {
+        nameEl.textContent = _t(nameKey);
+        nameEl.removeAttribute("data-i18n");
+    }
+    if (subEl) {
+        subEl.textContent = _t(subKey);
+        subEl.removeAttribute("data-i18n");
+    }
+}
+
+function _initSubscriptionPlans() {
+    document.querySelectorAll("[data-plan]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const planId = btn.getAttribute("data-plan");
+            if (!planId || !window.Store || !Store.setPlan) return;
+            if (planId === Store.getPlan()) return;
+
+            Store.setPlan(planId);
+            _renderSubscriptionButtons();
+            _renderCurrentPlanCard();
+        });
+    });
+    _renderSubscriptionButtons();
+}
+
+function _renderSubscriptionButtons() {
+    if (!window.Store || !Store.getPlan) return;
+    const current = Store.getPlan();
+    document.querySelectorAll("[data-plan]").forEach((btn) => {
+        const planId = btn.getAttribute("data-plan");
+        const isCurrent = planId === current;
+        btn.disabled = isCurrent;
+        btn.classList.toggle("is-current", isCurrent);
+        if (isCurrent) {
+            btn.textContent = _t("subs.current");
+            btn.classList.remove("btn--cream");
+            btn.classList.add("btn--soft");
+        } else {
+            btn.textContent = _t("subs.choose");
+            btn.classList.remove("btn--soft");
+            btn.classList.add("btn--cream");
+        }
+    });
 }
 
 function _initSaveProfile() {
@@ -286,16 +381,29 @@ function _initLocaleDropdown() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function _bootProfile() {
     _initTabs();
     _initToggles();
     _initSettingsNav();
+    _initSubscriptionPlans();
     _renderOverview();
     _initSaveProfile();
     _initPasswordSection();
     _initLocaleDropdown();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.Store && Store.ready) Store.ready.then(_bootProfile);
+    else _bootProfile();
 
     document.addEventListener("i18n:change", () => {
-        _renderOverview();
+        if (window.Store && Store.ready) Store.ready.then(() => _renderOverview());
+        else _renderOverview();
+        _renderSubscriptionButtons();
+    });
+
+    document.addEventListener("terem:plan-change", () => {
+        _renderSubscriptionButtons();
+        _renderCurrentPlanCard();
     });
 });

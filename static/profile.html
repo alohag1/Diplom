@@ -7,10 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/tokens.css?v=19">
-    <link rel="stylesheet" href="/static/css/base.css?v=19">
-    <link rel="stylesheet" href="/static/css/components.css?v=19">
-    <link rel="stylesheet" href="/static/css/pages.css?v=19">
+    <link rel="stylesheet" href="/static/css/tokens.css?v=27">
+    <link rel="stylesheet" href="/static/css/base.css?v=27">
+    <link rel="stylesheet" href="/static/css/components.css?v=27">
+    <link rel="stylesheet" href="/static/css/pages.css?v=27">
     <link rel="icon" type="image/png" href="/static/images/logo.png">
 </head>
 <body data-i18n-page-title="pageTitle.profile">
@@ -104,8 +104,8 @@
                     <div class="profile-plan">
                         <div class="profile-plan__avatar"><span data-icon="user"></span></div>
                         <div>
-                            <div class="profile-plan__name" data-i18n="profile.plan.free">Бесплатный</div>
-                            <div class="profile-plan__sub" data-i18n="profile.plan.freeSub">Для знакомства с сервисом</div>
+                            <div class="profile-plan__name" id="profile-plan-name" data-i18n="profile.plan.free">Бесплатный</div>
+                            <div class="profile-plan__sub" id="profile-plan-sub" data-i18n="profile.plan.freeSub">Для знакомства с сервисом</div>
                         </div>
                     </div>
                     <ul class="profile-plan__features">
@@ -157,7 +157,7 @@
                         <li data-i18n="subs.free.f3">Стандартная модель анализа</li>
                         <li data-i18n="subs.free.f4">Ограниченное кол-во рекомендаций креатива</li>
                     </ul>
-                        <button class="btn btn--block btn--rect btn--soft is-current" type="button" disabled data-i18n="subs.current">Текущий план</button>
+                        <button class="btn btn--block btn--rect btn--soft is-current" type="button" disabled data-plan="free" data-i18n="subs.current">Текущий план</button>
                 </article>
 
                 <article class="plan-card plan-card--wine">
@@ -172,7 +172,7 @@
                         <li data-i18n="subs.basic.f5">Экспорт результатов в PDF</li>
                         <li data-i18n="subs.basic.f6">Дополнительное кол-во рекомендаций креатива</li>
                     </ul>
-                    <button class="btn btn--block btn--rect btn--cream" type="button" data-i18n="subs.choose">Перейти на этот план</button>
+                    <button class="btn btn--block btn--rect btn--cream" type="button" data-plan="basic" data-i18n="subs.choose">Перейти на этот план</button>
                 </article>
 
                 <article class="plan-card plan-card--violet">
@@ -188,7 +188,7 @@
                         <li data-i18n="subs.pro.f6">Экспорт результатов в PDF, JSON, TXT</li>
                         <li data-i18n="subs.pro.f7">Неограниченное кол-во рекомендаций креатива</li>
                     </ul>
-                    <button class="btn btn--block btn--rect btn--cream" type="button" data-i18n="subs.choose">Перейти на этот план</button>
+                    <button class="btn btn--block btn--rect btn--cream" type="button" data-plan="pro" data-i18n="subs.choose">Перейти на этот план</button>
                 </article>
             </div>
         </section>
@@ -341,11 +341,11 @@
                                 <span class="settings-row__body">
                                     <span class="settings-row__title" data-i18n="settings.locale.uiLang">Язык интерфейса</span>
                                 </span>
-                                <span class="dropdown__label settings-row__value">Р СѓСЃСЃРєРёР№</span>
+                                <span class="dropdown__label settings-row__value">Русский</span>
                                 <span class="dropdown__chevron settings-row__chevron" data-icon="chevron"></span>
                             </button>
                             <div class="dropdown__menu">
-                                <button class="dropdown__option is-active" data-value="ru">Р СѓСЃСЃРєРёР№</button>
+                                <button class="dropdown__option is-active" data-value="ru">Русский</button>
                                 <button class="dropdown__option" data-value="en">English</button>
                             </div>
                         </div>
@@ -356,13 +356,15 @@
     </div>
 </div>
 
-<script src="/static/js/i18n.js?v=19"></script>
-<script src="/static/js/icons.js?v=19"></script>
-<script src="/static/js/app.js?v=19"></script>
-<script src="/static/js/store.js?v=19"></script>
-<script src="/static/js/dropdown.js?v=19"></script>
-<script src="/static/js/auth.js?v=19"></script>
-<script src="/static/js/profile.js?v=19"></script>
+<script src="/static/js/image-store.js?v=27"></script>
+<script src="/static/js/i18n.js?v=27"></script>
+<script src="/static/js/icons.js?v=27"></script>
+<script src="/static/js/app.js?v=27"></script>
+<script src="/static/js/store.js?v=28"></script>
+<script src="/static/js/plan-overlay.js?v=28"></script>
+<script src="/static/js/dropdown.js?v=27"></script>
+<script src="/static/js/auth.js?v=27"></script>
+<script src="/static/js/profile.js?v=27"></script>
 </body>
 </html>
 

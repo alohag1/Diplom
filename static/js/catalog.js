@@ -102,70 +102,26 @@ function _renderCard(item) {
 }
 
 function _togglePagerBar(show) {
-    const bar = document.getElementById("filter-bar-pager");
+    const bar = document.getElementById("catalog-pager");
     if (bar) bar.classList.toggle("is-hidden", !show);
 }
 
 function _renderPagination(total) {
     const wrap = _$("pagination");
-    if (!wrap) return;
-    const pages = Math.max(1, Math.ceil(total / CAT_STATE.pageSize));
-    wrap.setAttribute("aria-label", _t("pagination.pagesAria"));
-    if (total === 0 || pages <= 1) {
-        wrap.innerHTML = "";
-        _togglePagerBar(false);
-        return;
-    }
+    if (!wrap || !window.TeremPagination) return;
 
-    _togglePagerBar(true);
-    const cur = CAT_STATE.page;
-    const valLabel = _t("pagination.pageOf", { current: cur, total: pages });
-
-    wrap.innerHTML = `
-        <button type="button" class="pagination__edge" data-page="prev" ${cur <= 1 ? "disabled" : ""}>${_t("pagination.prev")}</button>
-        <div class="pagination__pages">
-            <input type="range" class="pagination__slider" id="cat-page-slider" min="1" max="${pages}" step="1" value="${cur}">
-            <div class="pagination__slider-val" id="cat-page-slider-val">${valLabel}</div>
-        </div>
-        <button type="button" class="pagination__edge" data-page="next" ${cur >= pages ? "disabled" : ""}>${_t("pagination.next")}</button>`;
-
-    const slider = wrap.querySelector("#cat-page-slider");
-    const valEl = wrap.querySelector("#cat-page-slider-val");
-
-    function _syncSliderUi(p) {
-        const safe = Math.min(Math.max(1, p), pages);
-        const v = _t("pagination.pageOf", { current: safe, total: pages });
-        const a = _t("pagination.sliderAria", { current: safe, total: pages });
-        if (valEl) valEl.textContent = v;
-        if (slider) {
-            slider.value = String(safe);
-            slider.setAttribute("aria-label", a);
-            slider.setAttribute("aria-valuemin", "1");
-            slider.setAttribute("aria-valuemax", String(pages));
-            slider.setAttribute("aria-valuenow", String(safe));
-            slider.setAttribute("aria-valuetext", a);
-        }
-    }
-
-    if (slider) {
-        slider.addEventListener("input", () => {
-            _syncSliderUi(Number(slider.value));
-        });
-        slider.addEventListener("change", () => {
-            CAT_STATE.page = Number(slider.value);
+    window.TeremPagination.renderNumberPagination({
+        wrap,
+        current: CAT_STATE.page,
+        totalItems: total,
+        pageSize: CAT_STATE.pageSize,
+        onChange(page) {
+            CAT_STATE.page = page;
             _render();
             window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-    }
-
-    wrap.querySelectorAll("[data-page]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const target = btn.dataset.page;
-            if (target === "prev") CAT_STATE.page = Math.max(1, CAT_STATE.page - 1);
-            else if (target === "next") CAT_STATE.page = Math.min(pages, CAT_STATE.page + 1);
-            _render();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
+        },
+        onHide: () => _togglePagerBar(false),
+        onShow: () => _togglePagerBar(true),
     });
 }
 
@@ -201,7 +157,7 @@ function _render() {
         grid.classList.add("is-hidden");
         if (pagination) pagination.innerHTML = "";
         _togglePagerBar(false);
-        const note = `<div class="empty"><span class="empty__icon" data-icon="info"></span>
+        const note = `<div class="empty empty--plain"><span class="empty__icon" data-icon="info"></span>
             <h2 class="empty__title">${_t("catalog.filterEmpty.title")}</h2>
             <p class="empty__text">${_t("catalog.filterEmpty.text")}</p></div>`;
         grid.innerHTML = "";
@@ -260,8 +216,7 @@ async function _delete(id) {
         ok = window.confirm(_t("dialog.deleteCatalogTitle"));
     }
     if (!ok) return;
-    Store.deleteUpload(id);
-    _render();
+    void Store.deleteUpload(id).then(() => _render());
 }
 
 function _initFilters() {
@@ -298,8 +253,12 @@ function _initFilters() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    _initFilters();
-    _render();
+    const boot = () => {
+        _initFilters();
+        _render();
+    };
+    if (window.Store && Store.ready) Store.ready.then(boot);
+    else boot();
 });
 
 document.addEventListener("i18n:change", () => {

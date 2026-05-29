@@ -193,7 +193,7 @@ function _compressImage(dataUrl, maxDim, quality, mime) {
 }
 
 async function _prepareImageForStorage(dataUrl) {
-    const STORE_LIMIT = 700 * 1024;
+    const STORE_LIMIT = window.TeremImageStore ? 1100 * 1024 : 700 * 1024;
     if (_dataUrlByteSize(dataUrl) <= STORE_LIMIT) {
         return { dataUrl, width: null, height: null };
     }
@@ -286,7 +286,7 @@ function _initDropzone() {
 }
 
 function _initMetaInputs() {
-    ["meta-title", "meta-author", "meta-date", "meta-desc"].forEach((id) => {
+    ["meta-title", "meta-author", "meta-date"].forEach((id) => {
         _$(id).addEventListener("input", _renderPreview);
     });
     _$("btn-add-tag").addEventListener("click", _addTag);
@@ -333,6 +333,25 @@ async function _showStorageError() {
 
 async function _submit() {
     if (!STATE.dataUrl) return;
+
+    if (!STATE.editId && window.Store && Store.isUploadLimitReached && Store.isUploadLimitReached()) {
+        const limit = Store.getUploadLimit();
+        if (window.TeremPlanOverlay) {
+            TeremPlanOverlay.open({
+                planId: Store.getUpgradePlanForUploadLimit(),
+                titleKey: "analyze.planOverlay.uploadTitle",
+                messageKey: "analyze.planOverlay.uploadLimit",
+                messageVars: { limit: limit || 5 },
+            });
+        } else {
+            const msg = window.I18n
+                ? window.I18n.t("analyze.planOverlay.uploadLimit", { limit: limit || 5 })
+                : `Достигнут лимит загрузок (${limit || 5} в месяц).`;
+            window.alert(msg);
+        }
+        return;
+    }
+
     const submitBtn = _$("btn-submit");
     if (submitBtn) submitBtn.disabled = true;
 
@@ -347,7 +366,7 @@ async function _submit() {
     const heightOut = prepared.height || STATE.height;
     const sizeOut = _dataUrlByteSize(imageOut) || STATE.fileSize;
 
-    const ok = Store.canStoreUpload({ image: imageOut });
+    const ok = await Store.canStoreUpload({ image: imageOut });
     if (!ok) {
         if (submitBtn) submitBtn.disabled = false;
         await _showStorageError();
@@ -360,14 +379,14 @@ async function _submit() {
             author: _$("meta-author").value.trim() || "—",
             tags: [...STATE.tags],
             date: displayDate,
-            description: _$("meta-desc").value.trim(),
+            description: "",
             image: imageOut,
             format: ext,
             width: widthOut,
             height: heightOut,
             size: sizeOut,
         };
-        const saved = Store.updateUpload(STATE.editId, patch);
+        const saved = await Store.updateUpload(STATE.editId, patch);
         if (!saved) {
             if (submitBtn) submitBtn.disabled = false;
             await _showStorageError();
@@ -383,7 +402,7 @@ async function _submit() {
         author: _$("meta-author").value.trim() || "—",
         tags: [...STATE.tags],
         date: displayDate,
-        description: _$("meta-desc").value.trim(),
+        description: "",
         image: imageOut,
         format: ext,
         width: widthOut,
@@ -392,7 +411,7 @@ async function _submit() {
         analyzed: false,
         createdAt: new Date().toISOString(),
     };
-    const saved = Store.saveUpload(item);
+    const saved = await Store.saveUpload(item);
     if (!saved) {
         if (submitBtn) submitBtn.disabled = false;
         await _showStorageError();
@@ -415,7 +434,6 @@ function _loadForEdit(id) {
     _$("meta-title").value = item.title || "";
     _$("meta-author").value = item.author || "";
     _$("meta-date").value = _formatDateForInput(item.date);
-    _$("meta-desc").value = item.description || "";
     _renderTags();
     _renderPreview();
     _updateSubmit();
@@ -434,7 +452,7 @@ function _loadForEdit(id) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function _bootUploadPage() {
     _initDropzone();
     _initMetaInputs();
     _$("btn-submit").addEventListener("click", () => void _submit());
@@ -443,8 +461,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const editId = params.get("edit");
     if (editId) _loadForEdit(editId);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.Store && Store.ready) Store.ready.then(_bootUploadPage);
+    else _bootUploadPage();
 });
 
 document.addEventListener("i18n:change", () => {
     if (window.I18n) window.I18n.applyI18n();
+    _renderPreview();
 });

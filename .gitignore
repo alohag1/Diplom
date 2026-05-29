@@ -5,8 +5,14 @@ uploads/
 clip_index.pkl
 vectorstore/
 vectorstore_dataset/
-data/
+/data/
+!/data/grading_rubric.json
+!/data/grading_rubric_en.json
 .env
 *.egg-info/
 dist/
 build/
+
+# Локальные утилиты разработки
+_fix_encoding.py
+_test_decode.py

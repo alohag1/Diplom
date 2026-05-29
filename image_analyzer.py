@@ -128,8 +128,27 @@ def _analyze_saturation(img: Image.Image) -> dict:
     }
 
 
-def _analyze_composition(img: Image.Image) -> dict:
-    """Анализ композиции: баланс по зонам, правило третей."""
+def _zone_detail(gray: np.ndarray, y1: int, y2: int, x1: int, x2: int) -> float:
+    """Средняя «детализация» зоны по горизонтальным и вертикальным контурам."""
+    patch = gray[y1:y2, x1:x2]
+    if patch.size == 0:
+        return 0.0
+    h_detail = 0.0
+    v_detail = 0.0
+    if patch.shape[1] > 1:
+        h_detail = float(np.mean(np.abs(np.diff(patch, axis=1))))
+    if patch.shape[0] > 1:
+        v_detail = float(np.mean(np.abs(np.diff(patch, axis=0))))
+    return (h_detail + v_detail) / 2.0
+
+
+def _analyze_composition(
+    img: Image.Image,
+    *,
+    contrast: dict | None = None,
+    colors: list[dict] | None = None,
+) -> dict:
+    """Анализ композиции: баланс по зонам, правило третей, перегруженность."""
     gray = np.array(img.convert("L"), dtype=np.float64)
     h, w = gray.shape
 
@@ -148,9 +167,12 @@ def _analyze_composition(img: Image.Image) -> dict:
     else:
         balance = "значительный дисбаланс"
 
-    edge_arr = np.abs(np.diff(gray, axis=1)).astype(np.float64)
+    h_edges = np.abs(np.diff(gray, axis=1))
+    v_edges = np.abs(np.diff(gray, axis=0))
+    global_edge = float((np.mean(h_edges) + np.mean(v_edges)) / 2.0)
+
     third_h, third_w = h // 3, w // 3
-    zones = {}
+    zones: dict[str, float] = {}
     zone_names = [
         ("верх-лево", (0, third_h, 0, third_w)),
         ("верх-центр", (0, third_h, third_w, 2 * third_w)),
@@ -163,10 +185,17 @@ def _analyze_composition(img: Image.Image) -> dict:
         ("низ-право", (2 * third_h, h, 2 * third_w, w)),
     ]
     for name, (y1, y2, x1, x2) in zone_names:
-        zone_edge = edge_arr[y1:y2, x1:min(x2, edge_arr.shape[1])]
-        zones[name] = round(float(np.mean(zone_edge)), 1)
+        zones[name] = round(_zone_detail(gray, y1, y2, x1, x2), 1)
 
     max_zone = max(zones, key=zones.get)
+    clutter = _analyze_clutter(
+        zones,
+        global_edge,
+        contrast=contrast or {},
+        colors=colors or [],
+        h_balance=h_balance,
+        v_balance=v_balance,
+    )
 
     return {
         "horizontal_balance": round(h_balance, 1),
@@ -174,6 +203,90 @@ def _analyze_composition(img: Image.Image) -> dict:
         "balance_verdict": balance,
         "visual_weight_center": max_zone,
         "zones_activity": zones,
+        **clutter,
+    }
+
+
+def _analyze_clutter(
+    zones: dict[str, float],
+    global_edge: float,
+    *,
+    contrast: dict,
+    colors: list[dict],
+    h_balance: float,
+    v_balance: float,
+) -> dict[str, Any]:
+    """Перегруженность: визуальный шум, число конкурирующих зон."""
+    values = list(zones.values())
+    if not values:
+        return {
+            "global_edge_density": 0.0,
+            "zone_activity_std": 0.0,
+            "zone_activity_cv": 0.0,
+            "active_zones_count": 0,
+            "total_zones": 0,
+            "busy_ratio": 0.0,
+            "competing_zones_count": 0,
+            "clutter_index": 0,
+            "clutter_level": "низкая",
+        }
+
+    avg = sum(values) / len(values)
+    std = float(np.std(values))
+    max_v = max(values)
+    cv = std / max(avg, 0.1)
+
+    median_v = float(np.median(values))
+    active_threshold = max(median_v * 0.85, avg * 0.55)
+    active_zones = sum(1 for v in values if v >= active_threshold)
+    busy_ratio = active_zones / len(values)
+
+    compete_threshold = max(max_v * 0.68, median_v * 1.15) if max_v > 0 else 0.0
+    competing = sum(1 for v in values if v >= compete_threshold)
+
+    n_dom = len([c for c in colors if c.get("percent", 0) >= 5])
+    brightness_std = contrast.get("std_deviation", 0.0)
+    max_imb = max(h_balance, v_balance)
+
+    edge_component = min(global_edge / 8.0, 1.0) * 28
+    busy_component = busy_ratio * 28
+    compete_component = min(competing / max(len(values) * 0.55, 1), 1.0) * 22
+    color_component = min(max(n_dom - 3, 0) / 4.0, 1.0) * 12
+    noise_component = min(max(brightness_std - 55, 0) / 35.0, 1.0) * 10
+    imbalance_component = min(max(max_imb - 20, 0) / 40.0, 1.0) * 8
+
+    clutter_index = round(
+        min(
+            100.0,
+            edge_component
+            + busy_component
+            + compete_component
+            + color_component
+            + noise_component
+            + imbalance_component,
+        ),
+        1,
+    )
+
+    if clutter_index >= 72:
+        clutter_level = "критическая"
+    elif clutter_index >= 52:
+        clutter_level = "высокая"
+    elif clutter_index >= 32:
+        clutter_level = "умеренная"
+    else:
+        clutter_level = "низкая"
+
+    return {
+        "global_edge_density": round(global_edge, 2),
+        "zone_activity_std": round(std, 2),
+        "zone_activity_cv": round(cv, 2),
+        "active_zones_count": active_zones,
+        "total_zones": len(values),
+        "busy_ratio": round(busy_ratio, 2),
+        "competing_zones_count": competing,
+        "clutter_index": clutter_index,
+        "clutter_level": clutter_level,
     }
 
 
@@ -218,7 +331,7 @@ def analyze_image_full(image_path: str) -> dict[str, Any]:
     colors = _quantize_colors(img, n_colors=8)
     contrast = _analyze_contrast(img)
     saturation = _analyze_saturation(img)
-    composition = _analyze_composition(img)
+    composition = _analyze_composition(img, contrast=contrast, colors=colors)
     harmony = _get_color_harmony(colors)
 
     description = _build_description_text(
@@ -270,5 +383,65 @@ def _build_description_text(
         f"Горизонтальный дисбаланс: {composition['horizontal_balance']} (лево vs право)",
         f"Вертикальный дисбаланс: {composition['vertical_balance']} (верх vs низ)",
         f"Основной визуальный вес: зона «{composition['visual_weight_center']}»",
+        f"Перегруженность: {composition['clutter_level']} "
+        f"(индекс {composition['clutter_index']}/100, "
+        f"активных зон {composition['active_zones_count']}/{composition['total_zones']}, "
+        f"конкурирующих зон {composition['competing_zones_count']})",
     ]
+    return "\n".join(lines)
+
+
+CREATIVE_TYPE_LABELS: dict[str, str] = {
+    "poster": "Постер",
+    "website": "Веб-сайт",
+    "logo": "Логотип",
+    "mockup": "Мокап",
+    "banner": "Баннер",
+    "other": "Другое",
+}
+
+CLIP_CATEGORY_LABELS: dict[str, str] = {
+    "posters": "Постер",
+    "web_design": "Веб-сайт / интерфейс",
+    "typography": "Типографика / текстовый макет",
+    "unknown": "Не определено",
+}
+
+
+def enrich_image_description(
+    base: str,
+    *,
+    creative_type: str | None = None,
+    user_description: str | None = None,
+    clip_category: str | None = None,
+) -> str:
+    """Добавляет блок о типе макета и пояснение происхождения метрик."""
+    lines = ["Содержание макета"]
+
+    type_label = CREATIVE_TYPE_LABELS.get(creative_type or "", "")
+    clip_label = CLIP_CATEGORY_LABELS.get(
+        clip_category or "",
+        clip_category or "",
+    )
+
+    depicted: list[str] = []
+    if type_label:
+        depicted.append(type_label)
+    elif clip_label and clip_label != "Не определено":
+        depicted.append(clip_label)
+
+    if depicted:
+        lines.append(f"Изображено: {', '.join(depicted)}.")
+    else:
+        lines.append("Тип макета не указан — уточните в описании (постер, логотип, баннер и т.д.).")
+
+    if clip_label and type_label and clip_label != type_label:
+        lines.append(
+            f"Визуальная категория по сходству с эталонами датасета: {clip_label}."
+        )
+
+    if user_description and user_description.strip():
+        lines.append(f"Описание от автора: {user_description.strip()}")
+
+    lines.extend(["", base])
     return "\n".join(lines)

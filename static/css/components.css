@@ -9,7 +9,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    padding: 16px var(--content-x);
+    padding: 12px var(--content-x);
     position: relative;
     z-index: 50;
     box-sizing: border-box;
@@ -1125,6 +1125,10 @@
     gap: 18px;
 }
 
+.empty.empty--plain {
+    border: none;
+}
+
 .empty__icon {
     width: 68px;
     height: 68px;
@@ -1304,6 +1308,77 @@
 .pagination__btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+.pagination.pagination--numbers,
+.pagination.pagination--slider {
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+.pagination--slider {
+    width: 100%;
+    max-width: min(520px, 100%);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.pagination--slider .pagination__pages {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    max-width: min(320px, 48vw);
+}
+
+.pagination--numbers {
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+.pagination--numbers .pagination__edge {
+    padding: 10px 4px;
+    font-size: var(--fs-body);
+    color: var(--color-text-light);
+    white-space: nowrap;
+}
+
+.pagination--numbers .pagination__edge:hover:not(:disabled) {
+    color: var(--color-primary);
+    background: transparent;
+}
+
+.pagination__nums {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.pagination--numbers .pagination__btn {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: var(--fs-body);
+    color: var(--color-text-light);
+}
+
+.pagination--numbers .pagination__btn.is-active {
+    background: var(--color-primary);
+    color: var(--color-text-dark);
+    font-weight: var(--font-bold);
+}
+
+.pagination--numbers .pagination__btn:hover:not(.is-active):not(:disabled) {
+    color: var(--color-primary);
+    background: var(--color-white-08);
 }
 
 /* ===== Section heading ===== */

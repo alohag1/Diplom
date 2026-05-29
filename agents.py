@@ -28,11 +28,17 @@ from config import (
     CRITERIA_JSON_TEMPLATE,
     DESIGN_CRITERIA,
     UPLOADS_DIR,
+    SCORER_VERSION,
 )
-from models import CriterionResult, DesignAnalysis
-from image_analyzer import analyze_image_full
+from models import CriterionResult, DesignAnalysis, PaletteColor
+from image_analyzer import (
+    analyze_image_full,
+    enrich_image_description,
+    CREATIVE_TYPE_LABELS,
+)
 from clip_embedder import CLIPEmbedder
-from metric_scorer import score_from_metrics
+from metric_scorer import score_from_metrics, enrich_criteria_from_llm
+from creative_resolver import resolve_creative_type
 
 
 def _log(msg: str) -> None:
@@ -148,35 +154,91 @@ class CriticAgent:
             _log(f"  [RAG] Ошибка поиска ({e}). Контекст пуст.")
             return ""
 
+    def _build_rag_context(
+        self,
+        creative_type_label: str,
+        metrics: dict,
+    ) -> str:
+        """RAG-контекст по каждому критерию с учётом типа креатива."""
+        sat = metrics.get("saturation", {}).get("mean_saturation", 0)
+        n_colors = len([c for c in metrics.get("colors", []) if c.get("percent", 0) >= 5])
+        parts: list[str] = []
+        for criterion in DESIGN_CRITERIA:
+            query = (
+                f"{criterion['query']} {creative_type_label} рекламный креатив "
+                f"насыщенность {sat:.0f}% цветов {n_colors}"
+            )
+            ctx = self._retrieve_book_context(query)
+            if ctx:
+                parts.append(f"--- {criterion['name']} ---\n{ctx}")
+        if not parts:
+            return self._retrieve_book_context(
+                f"дизайн {creative_type_label} типографика цвет композиция иерархия"
+            )
+        return "\n\n".join(parts)
+
     def evaluate_all(
         self,
         image_path: str,
         image_description: str,
         metrics: dict,
-    ) -> tuple[list[CriterionResult], dict]:
-        _log("  [CLIP] Ищу визуально похожие в датасете...")
-        clip_result = self._clip.score_by_neighbors(image_path, top_k=10)
-        _log(f"  [CLIP] Score: {clip_result['score']}/5 "
-             f"(good: {clip_result.get('good_count', 0)}, "
-             f"bad: {clip_result.get('bad_count', 0)})")
+        clip_result: dict,
+        *,
+        creative_type: str | None = None,
+        creative_type_label: str | None = None,
+        scoring_type: str | None = None,
+        scoring_type_label: str | None = None,
+        user_description: str | None = None,
+    ) -> list[CriterionResult]:
+        _log("  [CLIP] Score: {}/5 (good: {}, bad: {})".format(
+            clip_result["score"],
+            clip_result.get("good_count", 0),
+            clip_result.get("bad_count", 0),
+        ))
+
+        type_label = scoring_type_label or creative_type_label or "креатив"
+        score_type = scoring_type or creative_type or "other"
+        user_desc = (user_description or "").strip() or "не указано"
+
+        metric_results = score_from_metrics(
+            metrics,
+            clip_result["score"],
+            creative_type=score_type,
+            creative_type_label=type_label,
+            clip_good_ratio=clip_result.get("good_ratio"),
+        )
+        _log(f"  [Metrics v{SCORER_VERSION}] Баллы: " + ", ".join(
+            f"{c.id}={c.score}" for c in metric_results
+        ))
 
         try:
-            results = self._evaluate_with_llm(image_description, clip_result)
-            if results:
-                return results, clip_result
+            llm_results = self._evaluate_with_llm(
+                image_description,
+                clip_result,
+                metrics=metrics,
+                creative_type=creative_type or "other",
+                creative_type_label=creative_type_label or type_label,
+                user_description=user_desc,
+            )
+            if llm_results:
+                _log("  [LLM] Рекомендации от модели; оценки — из метрик.")
+                return enrich_criteria_from_llm(metric_results, llm_results)
         except Exception as e:
-            _log(f"  [LLM] Ошибка ({e}). Использую эвристический скоринг.")
+            _log(f"  [LLM] Ошибка ({e}). Только метрики.")
 
-        _log("  [Fallback] Скоринг по метрикам + CLIP.")
-        results = score_from_metrics(metrics, clip_result["score"])
-        return results, clip_result
+        return metric_results
 
     def _evaluate_with_llm(
-        self, image_description: str, clip_result: dict
+        self,
+        image_description: str,
+        clip_result: dict,
+        *,
+        metrics: dict,
+        creative_type: str,
+        creative_type_label: str,
+        user_description: str,
     ) -> list[CriterionResult]:
-        book_context = self._retrieve_book_context(
-            "дизайн типографика цвет композиция иерархия"
-        )
+        book_context = self._build_rag_context(creative_type_label, metrics)
         prompt_text = UNIFIED_CRITIC_PROMPT.format(
             image_description=image_description,
             clip_verdict=clip_result["verdict"],
@@ -188,6 +250,9 @@ class CriticAgent:
             clip_category=clip_result.get("dominant_category", "—"),
             book_context=book_context,
             criteria_json_template=CRITERIA_JSON_TEMPLATE,
+            creative_type=creative_type,
+            creative_type_label=creative_type_label,
+            user_description=user_description,
         )
 
         _log("  [LLM] Запрос в qwen3.5:9b (think=False)...")
@@ -211,7 +276,11 @@ class DesignAnalyzer:
         _log("Агенты готовы.")
 
     def analyze(
-        self, image_path: str, category: str | None = None
+        self,
+        image_path: str,
+        category: str | None = None,
+        creative_type: str | None = None,
+        user_description: str | None = None,
     ) -> DesignAnalysis:
         _log(f"\n{'='*50}")
         _log(f"  Анализирую: {Path(image_path).name}")
@@ -222,13 +291,54 @@ class DesignAnalyzer:
         description = full["description"]
         metrics = full["metrics"]
 
-        criteria_results, clip_result = self.critic_agent.evaluate_all(
-            image_path, description, metrics
+        _log("  [CLIP] Ищу визуально похожие в датасете...")
+        clip_result = self.critic_agent._clip.score_by_neighbors(image_path, top_k=10)
+
+        resolved = resolve_creative_type(
+            metrics,
+            clip_category=clip_result.get("dominant_category"),
+            user_description=user_description,
+            user_selected=creative_type,
+        )
+        detected_type = resolved["type"]
+        detected_label = resolved["label"]
+        user_type = (
+            creative_type
+            if creative_type in CREATIVE_TYPE_LABELS
+            else None
+        )
+        display_type = user_type or detected_type
+        display_label = CREATIVE_TYPE_LABELS.get(display_type, detected_label)
+        scoring_type = user_type or detected_type
+        scoring_label = CREATIVE_TYPE_LABELS.get(scoring_type, detected_label)
+        _log(
+            f"  [Type] Скоринг: {scoring_label} ({scoring_type}). "
+            f"Отображение: {display_label} ({display_type})."
+        )
+
+        criteria_results = self.critic_agent.evaluate_all(
+            image_path,
+            description,
+            metrics,
+            clip_result,
+            creative_type=detected_type,
+            creative_type_label=detected_label,
+            scoring_type=scoring_type,
+            scoring_type_label=scoring_label,
+            user_description=user_description,
+        )
+
+        description = enrich_image_description(
+            description,
+            creative_type=display_type,
+            user_description=user_description,
+            clip_category=clip_result.get("dominant_category"),
         )
 
         overall = sum(c.score for c in criteria_results) / len(criteria_results)
         summary_parts = [f"{c.name}: {c.score}/5" for c in criteria_results]
         summary = (
+            f"Тип креатива: {display_label}. "
             f"Общая оценка: {overall:.1f}/5. "
             + ", ".join(summary_parts) + ". "
             + clip_result.get("verdict", "")
@@ -236,15 +346,34 @@ class DesignAnalyzer:
 
         _log(f"  Итого: {overall:.1f}/5")
 
+        palette = [
+            PaletteColor(hex=c["hex"], name=c["name"], percent=c["percent"])
+            for c in metrics.get("colors", [])
+        ]
+
         return DesignAnalysis(
             image_description=description,
             criteria=criteria_results,
             overall_score=round(overall, 1),
             summary=summary,
+            creative_type=display_type,
+            creative_type_label=display_label,
+            palette=palette,
+            scorer_version=SCORER_VERSION,
         )
 
     def analyze_base64(
-        self, img_b64: str, mime: str = "image/png", category: str | None = None
+        self,
+        img_b64: str,
+        mime: str = "image/png",
+        category: str | None = None,
+        creative_type: str | None = None,
+        user_description: str | None = None,
     ) -> DesignAnalysis:
         path = _save_base64_image(img_b64)
-        return self.analyze(path, category)
+        return self.analyze(
+            path,
+            category,
+            creative_type=creative_type,
+            user_description=user_description,
+        )

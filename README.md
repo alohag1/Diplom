@@ -61,7 +61,7 @@
 
 ```bash
 git clone https://github.com/alohag1/Diplom.git
-cd Diplom/design-ai-analyzer
+cd Diplom
 
 python -m venv venv
 .\venv\Scripts\activate          # Windows
@@ -120,6 +120,7 @@ python api.py
 | `/upload` | Загрузка изображения |
 | `/catalog` | Каталог эталонов |
 | `/analyze` | Анализ креатива |
+| `/grading` | Система оценок (шкала по критериям) |
 | `/reports` | История отчётов |
 | `/profile` | Профиль пользователя |
 
@@ -128,6 +129,7 @@ python api.py
 | Метод | Путь | Описание |
 |---|---|---|
 | GET | `/api/health` | Состояние сервера и фонового импорта |
+| GET | `/api/grading-rubric` | Шкала оценок (query: `lang=ru` или `en`) |
 | POST | `/api/analyze` | Загрузить изображение (multipart), получить HTML или JSON |
 | POST | `/api/analyze/base64` | Анализ изображения, переданного в base64 |
 | POST | `/api/ingest-dataset` | Запустить импорт датасета в фоне |
@@ -150,9 +152,9 @@ python api.py
 ## Структура проекта
 
 ```
-design-ai-analyzer/
 ├── api.py                  # FastAPI-сервер и роутинг страниц
 ├── agents.py               # Пайплайн анализа (CLIP + LLM + RAG)
+├── creative_resolver.py    # Определение типа креатива
 ├── metric_scorer.py        # Эвристический скоринг по метрикам
 ├── image_analyzer.py       # Извлечение числовых метрик
 ├── clip_embedder.py        # CLIP-эмбеддинги и поиск похожих
@@ -168,6 +170,7 @@ design-ai-analyzer/
     ├── upload.html
     ├── catalog.html
     ├── analyze.html
+    ├── grading.html
     ├── reports.html
     ├── profile.html
     ├── css/                # tokens, base, components, pages

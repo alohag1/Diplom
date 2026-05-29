@@ -5,15 +5,34 @@
 
 const AN = {
     tab: "requests",
+    createSource: "catalog",
+    creativeType: "poster",
     selectedUploadId: null,
     imageDataUrl: null,
     imageTitle: "",
+    imageNaturalW: null,
+    imageNaturalH: null,
     selectedJobId: null,
     resultSub: "criteria",
     filterStatus: "all",
     filterDate: "all",
+    requestsPage: 1,
+    requestsPageSize: 10,
+    resultsListPage: 1,
+    resultsListPageSize: 10,
     exportFormat: "pdf",
 };
+
+const CREATIVE_LABEL_KEY = {
+    poster: "analyze.create.typePoster",
+    website: "analyze.create.typeWebsite",
+    logo: "analyze.create.typeLogo",
+    mockup: "analyze.create.typeMockup",
+    banner: "analyze.create.typeBanner",
+    other: "analyze.create.typeOther",
+};
+
+const ANALYZE_MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 const CRITERION_ICONS = {
     typography: "typography",
@@ -22,7 +41,26 @@ const CRITERION_ICONS = {
     composition: "composition",
 };
 
+const CRITERION_LABEL_KEY = {
+    typography: "criterion.typography",
+    color: "criterion.color",
+    hierarchy: "criterion.hierarchy",
+    composition: "criterion.composition",
+};
+
 const CRITERION_ORDER = ["typography", "color", "hierarchy", "composition"];
+
+function _resolveJobImage(job) {
+    if (!job) return "";
+    if (Store.resolveAnalysisImage) return Store.resolveAnalysisImage(job);
+    return job.image || "";
+}
+
+function _criterionDisplayName(criterion) {
+    const id = String((criterion && criterion.id) || "").toLowerCase();
+    const key = CRITERION_LABEL_KEY[id];
+    return key ? _t(key) : String((criterion && criterion.name) || id);
+}
 
 function _sortCriteria(list) {
     const arr = Array.isArray(list) ? list.slice() : [];
@@ -68,19 +106,57 @@ function _dataUrlToBase64(dataUrl) {
     return m ? m[2] : null;
 }
 
-async function _fetchAnalyze(dataUrl) {
+async function _fetchAnalyze(dataUrl, context) {
     const b64 = _dataUrlToBase64(dataUrl);
     if (!b64) throw new Error("bad data url");
+    const body = {
+        image_base64: b64,
+        filename: "creative.png",
+    };
+    if (context && context.description) body.description = context.description;
+    if (context && context.creativeType) body.creative_type = context.creativeType;
     const res = await fetch("/api/analyze/base64", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_base64: b64, filename: "creative.png" }),
+        body: JSON.stringify(body),
     });
     if (!res.ok) {
         const text = await res.text();
         throw new Error(text || res.statusText);
     }
     return res.json();
+}
+
+const EXPECTED_SCORER_VERSION = "2.1";
+
+async function _fetchScorerVersion() {
+    try {
+        const res = await fetch("/api/health", { cache: "no-store" });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.scorer_version || null;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function _ensureFreshScorer() {
+    const version = await _fetchScorerVersion();
+    if (version === EXPECTED_SCORER_VERSION) return true;
+    const msg = _t("analyze.errorStaleScorer", {
+        current: version || "—",
+        expected: EXPECTED_SCORER_VERSION,
+    });
+    if (window.TeremDialog) {
+        await window.TeremDialog.openAlertDialog({
+            title: _t("common.info"),
+            message: msg,
+            okKey: "common.ok",
+        });
+    } else {
+        window.alert(msg);
+    }
+    return false;
 }
 
 function _statusLabel(status) {
@@ -121,52 +197,305 @@ function _filterJobs(list) {
     });
 }
 
-function _showCreatePreview() {
-    const ph = _$("analyze-placeholder");
-    const wrap = _$("analyze-preview-wrap");
-    const img = _$("analyze-preview-img");
-    const btn = _$("btn-create-request");
-    if (!ph || !wrap || !img || !btn) return;
-    if (!AN.imageDataUrl) {
-        ph.classList.remove("is-hidden");
-        wrap.classList.add("is-hidden");
-        btn.disabled = true;
-        return;
-    }
-    ph.classList.add("is-hidden");
-    wrap.classList.remove("is-hidden");
-    img.src = AN.imageDataUrl;
-    img.alt = AN.imageTitle || _t("analyze.create.title");
-    btn.disabled = false;
+function _formatDims() {
+    if (AN.imageNaturalW && AN.imageNaturalH) return `${AN.imageNaturalW}×${AN.imageNaturalH}`;
+    return "— × —";
 }
 
-function _renderCatalogPicker() {
-    const grid = _$("analyze-picker-grid");
-    const empty = _$("analyze-picker-empty");
-    const picker = _$("analyze-picker");
-    if (!grid || !empty || !picker) return;
+function _creativeTypeLocalized(typeId) {
+    const id = typeId || AN.creativeType;
+    const key = CREATIVE_LABEL_KEY[id] || CREATIVE_LABEL_KEY.other;
+    return _t(key);
+}
+
+function _resolveJobCreativeType(job) {
+    if (!job) return null;
+    if (job.creativeType) return job.creativeType;
+    if (job.result && job.result.creative_type) return job.result.creative_type;
+    return null;
+}
+
+function _resolveJobCreativeLabel(job) {
+    const typeId = _resolveJobCreativeType(job);
+    if (!typeId) return null;
+    if (job && job.creativeType === typeId) return _creativeTypeLocalized(typeId);
+    if (job && job.result && job.result.creative_type_label) {
+        return job.result.creative_type_label;
+    }
+    return _creativeTypeLocalized(typeId);
+}
+
+const _TYPE_TEXT_PATTERNS = {
+    poster: /\b(постер|плакат|афиш|poster)\b/i,
+    website: /\b(сайт|веб|website|лендинг|интерфейс|экран|страниц)\b/i,
+    logo: /\b(логотип|лого|эмблем|logo|фирменн\w*\s+знак)\b/i,
+    banner: /\b(баннер|banner|горизонтальн\w*\s+баннер)\b/i,
+    mockup: /\b(мокап|mockup|упаковк)\b/i,
+};
+
+/** @param {number | null} w @param {number | null} h */
+function _inferTypeFromAspect(w, h) {
+    if (!w || !h) return { type: null, confidence: 0 };
+    const ratio = w / h;
+    if (ratio >= 2.2) return { type: "banner", confidence: 0.78 };
+    if (ratio >= 1.75) return { type: "banner", confidence: 0.58 };
+    if (ratio <= 0.58) return { type: "poster", confidence: 0.76 };
+    if (ratio <= 0.82) return { type: "poster", confidence: 0.58 };
+    if (ratio >= 0.88 && ratio <= 1.18) return { type: "logo", confidence: 0.62 };
+    if (ratio >= 1.22 && ratio <= 1.72) return { type: "website", confidence: 0.52 };
+    return { type: "other", confidence: 0.4 };
+}
+
+/** @param {string} text */
+function _detectTypeFromText(text) {
+    const s = String(text || "").toLowerCase();
+    if (!s.trim()) return { type: null, confidence: 0 };
+    let bestType = null;
+    let bestScore = 0;
+    for (const [type, re] of Object.entries(_TYPE_TEXT_PATTERNS)) {
+        const hits = s.match(re);
+        const score = hits ? hits.length : 0;
+        if (score > bestScore) {
+            bestScore = score;
+            bestType = type;
+        }
+    }
+    if (!bestType) return { type: null, confidence: 0 };
+    return { type: bestType, confidence: Math.min(0.85, 0.45 + bestScore * 0.2) };
+}
+
+/**
+ * Определяет тип креатива по картинке (приоритет), описанию и тегу пользователя.
+ */
+function _resolveCreativeContext() {
+    const visual = _inferTypeFromAspect(AN.imageNaturalW, AN.imageNaturalH);
+    const fromDesc = _detectTypeFromText(_getUserDescription());
+    const userTag = AN.creativeType in CREATIVE_LABEL_KEY ? AN.creativeType : "other";
+
+    const votes = {};
+    if (visual.type) {
+        votes[visual.type] = (votes[visual.type] || 0) + visual.confidence * 0.55;
+    }
+    if (fromDesc.type) {
+        votes[fromDesc.type] = (votes[fromDesc.type] || 0) + fromDesc.confidence * 0.35;
+    }
+    votes[userTag] = (votes[userTag] || 0) + 0.1;
+
+    let detected = "other";
+    let top = 0;
+    for (const [type, weight] of Object.entries(votes)) {
+        if (weight > top) {
+            top = weight;
+            detected = type;
+        }
+    }
+    if (!visual.type && !fromDesc.type) detected = userTag;
+
+    const textTypeReliable = fromDesc.type && fromDesc.confidence >= 0.45;
+    const tagMismatch =
+        !textTypeReliable &&
+        userTag !== detected &&
+        visual.type &&
+        visual.confidence >= 0.58 &&
+        userTag !== visual.type;
+    const descMismatch =
+        !textTypeReliable &&
+        fromDesc.type &&
+        fromDesc.confidence >= 0.5 &&
+        detected !== fromDesc.type &&
+        visual.type &&
+        fromDesc.type !== visual.type;
+
+    return {
+        detected,
+        visual,
+        fromDesc,
+        userTag,
+        tagMismatch,
+        descMismatch,
+    };
+}
+
+async function _probeNaturalSize(dataUrl) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () =>
+            resolve({ w: img.naturalWidth || null, h: img.naturalHeight || null });
+        img.onerror = () => resolve({ w: null, h: null });
+        img.src = dataUrl || "";
+    });
+}
+
+function _pickUploadFromCatalog(uploadId) {
+    const item = Store.findUpload(uploadId);
+    if (!item) return;
+    AN.selectedUploadId = item.id;
+    AN.imageDataUrl = item.image;
+    AN.imageTitle = item.title || "";
+    void _refreshImageDimsAndUi();
+}
+
+function _renderCatalogGrid() {
+    const grid = _$("analyze-catalog-grid");
+    const emptyHint = _$("analyze-catalog-empty-hint");
+    if (!grid) return;
     const uploads = Store.getUploads();
-    grid.innerHTML = "";
-    if (!uploads.length) {
-        empty.classList.remove("is-hidden");
+    if (emptyHint) {
+        emptyHint.classList.toggle("is-hidden", uploads.length !== 0 || AN.createSource !== "catalog");
+    }
+    if (AN.createSource !== "catalog") {
+        grid.innerHTML = "";
         return;
     }
-    empty.classList.add("is-hidden");
-    uploads.forEach((u) => {
-        const thumb = document.createElement("button");
-        thumb.type = "button";
-        thumb.className = "analyze-picker__thumb";
-        thumb.dataset.uploadId = u.id;
-        const title = (u.title || "—").replace(/</g, "&lt;");
-        thumb.innerHTML = `<img src="${u.image}" alt=""><span class="analyze-picker__thumb-title">${title}</span>`;
-        thumb.addEventListener("click", () => {
-            AN.selectedUploadId = u.id;
-            AN.imageDataUrl = u.image;
-            AN.imageTitle = u.title || "";
-            _showCreatePreview();
-            picker.classList.add("is-hidden");
+    if (!uploads.length) {
+        grid.innerHTML = "";
+        return;
+    }
+    grid.innerHTML = uploads
+        .map((u) => {
+            const active = AN.selectedUploadId === u.id;
+            const title = _escapeHtml(u.title || "—");
+            return `<button type="button" class="analyze-picker__thumb${active ? " is-active" : ""}" role="option" aria-selected="${active ? "true" : "false"}" data-upload-id="${_escapeHtml(u.id)}">
+                <img src="${u.image}" alt="${title}">
+                <span class="analyze-picker__thumb-title">${title}</span>
+            </button>`;
+        })
+        .join("");
+    grid.querySelectorAll("[data-upload-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            _pickUploadFromCatalog(btn.getAttribute("data-upload-id"));
+            _renderCatalogGrid();
         });
-        grid.appendChild(thumb);
+    });
+}
+
+async function _refreshImageDimsAndUi() {
+    if (!AN.imageDataUrl) {
+        AN.imageNaturalW = null;
+        AN.imageNaturalH = null;
+    } else {
+        const dims = await _probeNaturalSize(AN.imageDataUrl);
+        AN.imageNaturalW = dims.w;
+        AN.imageNaturalH = dims.h;
+    }
+    _renderUploadPreview();
+    _syncSubmitEnabled();
+}
+
+function _renderUploadPreview() {
+    const empty = _$("analyze-upload-preview-empty");
+    const wrap = _$("analyze-upload-preview-wrap");
+    const img = _$("analyze-upload-preview-img");
+    if (!empty || !wrap || !img || AN.createSource !== "upload") return;
+
+    const hasImage = Boolean(AN.imageDataUrl);
+    empty.classList.toggle("is-hidden", hasImage);
+    wrap.classList.toggle("is-hidden", !hasImage);
+    if (hasImage) {
+        img.src = AN.imageDataUrl;
+        img.alt = AN.imageTitle || "";
+    } else {
+        img.removeAttribute("src");
+        img.alt = "";
+    }
+}
+
+function _openAnalyzeFilePicker() {
+    const inp = _$("analyze-file-input");
+    if (!inp) return;
+    inp.value = "";
+    inp.click();
+}
+
+function _applyCreateSourceVisual() {
+    const catTile = _$("analyze-tile-catalog");
+    const upTile = _$("analyze-tile-upload");
+    const catBlock = _$("analyze-catalog-block");
+    const upPanel = _$("analyze-upload-panel");
+    if (!catTile || !upTile || !catBlock || !upPanel) return;
+    const catalogOn = AN.createSource === "catalog";
+    catTile.classList.toggle("is-active", catalogOn);
+    upTile.classList.toggle("is-active", !catalogOn);
+    catBlock.classList.toggle("is-hidden", !catalogOn);
+    upPanel.classList.toggle("is-hidden", catalogOn);
+
+    _renderCatalogGrid();
+
+    const emptyHint = _$("analyze-catalog-empty-hint");
+    const uploads = Store.getUploads();
+    if (emptyHint) emptyHint.classList.toggle("is-hidden", !catalogOn || uploads.length > 0);
+    _renderUploadPreview();
+}
+
+function _setCreateSource(mode) {
+    if (mode !== "catalog" && mode !== "upload") return;
+    if (mode === AN.createSource) return;
+    AN.createSource = mode;
+    AN.selectedUploadId = null;
+    AN.imageDataUrl = null;
+    AN.imageTitle = "";
+    AN.imageNaturalW = null;
+    AN.imageNaturalH = null;
+    const inp = _$("analyze-file-input");
+    if (inp) inp.value = "";
+
+    void _refreshImageDimsAndUi();
+    _applyCreateSourceVisual();
+    _syncSubmitEnabled();
+}
+
+function _getUserDescription() {
+    const ta = _$("analyze-description");
+    return ta ? String(ta.value || "").trim() : "";
+}
+
+function _analysisCanSubmit() {
+    if (!AN.imageDataUrl || !_getUserDescription()) return false;
+    if (AN.createSource === "catalog") {
+        const uploads = Store.getUploads();
+        return uploads.length > 0 && !!AN.selectedUploadId;
+    }
+    return true;
+}
+
+function _syncSubmitEnabled() {
+    const btn = _$("btn-create-request");
+    if (!btn) return;
+    const ready = _analysisCanSubmit();
+    btn.disabled = !ready;
+    btn.classList.toggle("is-active", ready);
+}
+
+function _bindDescCounter() {
+    const ta = _$("analyze-description");
+    const cnt = _$("analyze-desc-count");
+    if (!ta || !cnt) return;
+
+    function update() {
+        cnt.textContent = String(ta.value.length);
+        _syncSubmitEnabled();
+    }
+
+    ta.addEventListener("input", update);
+    update();
+}
+
+function _syncAnalyzeCreateUi() {
+    _renderCatalogGrid();
+    _syncSubmitEnabled();
+}
+
+function _bindCreativeChips() {
+    document.querySelectorAll("[data-creative-type]").forEach((chip) => {
+        chip.addEventListener("click", () => {
+            const kind = chip.getAttribute("data-creative-type") || "other";
+            AN.creativeType = kind in CREATIVE_LABEL_KEY ? kind : "other";
+            document.querySelectorAll("[data-creative-type]").forEach((c) => {
+                const active = (c.getAttribute("data-creative-type") || "") === AN.creativeType;
+                c.classList.toggle("is-active", active);
+                c.setAttribute("aria-pressed", active ? "true" : "false");
+            });
+        });
     });
 }
 
@@ -195,6 +524,31 @@ function _activateTab(name) {
     }
     if (name === "requests") _renderRequestsTable();
     if (name === "results") _renderResultsPanel();
+    if (name === "create") _syncAnalyzeCreateUi();
+}
+
+function _renderRequestsPagination(total) {
+    const bar = _$("analyze-requests-pager");
+    const wrap = _$("analyze-requests-pagination");
+    if (!bar || !wrap || !window.TeremPagination) {
+        if (bar) bar.classList.add("is-hidden");
+        return;
+    }
+
+    window.TeremPagination.renderNumberPagination({
+        wrap,
+        current: AN.requestsPage,
+        totalItems: total,
+        pageSize: AN.requestsPageSize,
+        onChange(page) {
+            AN.requestsPage = page;
+            _renderRequestsTable();
+            const pager = _$("analyze-requests-pager");
+            if (pager) pager.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        },
+        onHide: () => bar.classList.add("is-hidden"),
+        onShow: () => bar.classList.remove("is-hidden"),
+    });
 }
 
 function _renderRequestsTable() {
@@ -207,26 +561,39 @@ function _renderRequestsTable() {
         tbody.innerHTML = "";
         empty.classList.remove("is-hidden");
         shell.classList.add("analyze-table-shell--empty");
+        AN.requestsPage = 1;
+        _renderRequestsPagination(0);
         return;
     }
     empty.classList.add("is-hidden");
     shell.classList.remove("analyze-table-shell--empty");
-    tbody.innerHTML = jobs
+
+    const pages = Math.max(1, Math.ceil(jobs.length / AN.requestsPageSize));
+    if (AN.requestsPage > pages) AN.requestsPage = pages;
+    if (AN.requestsPage < 1) AN.requestsPage = 1;
+    const start = (AN.requestsPage - 1) * AN.requestsPageSize;
+    const pageJobs = jobs.slice(start, start + AN.requestsPageSize);
+
+    tbody.innerHTML = pageJobs
         .map((job, idx) => {
-            const num = jobs.length - idx;
-            const desc = (job.description || job.title || "—").replace(/</g, "&lt;");
+            const num = jobs.length - (start + idx);
+            const descRaw = job.description || job.title || "—";
+            const desc = descRaw.replace(/</g, "&lt;");
+            const descTitle = descRaw.replace(/"/g, "&quot;");
             const date = Store.formatDate(new Date(job.createdAt));
             const pill = `<span class="analyze-pill ${_statusClass(job.status)}">${_statusLabel(job.status)}</span>`;
+            const thumb = _resolveJobImage(job);
             return `<tr data-job-id="${job.id}">
-            <td>#${num}</td>
-            <td><img class="analyze-table__thumb" src="${job.image}" alt=""></td>
-            <td>${desc}</td>
-            <td>${date}</td>
-            <td>${pill}</td>
-            <td><button type="button" class="btn-icon btn-icon--danger" data-action="del" data-icon="trash" aria-label="${_t("catalog.card.deleteAria")}"></button></td>
+            <td class="analyze-table__col analyze-table__col--id">#${num}</td>
+            <td class="analyze-table__col analyze-table__col--preview"><img class="analyze-table__thumb" src="${thumb}" alt=""></td>
+            <td class="analyze-table__col analyze-table__col--desc"><span class="analyze-table__desc" title="${descTitle}">${desc}</span></td>
+            <td class="analyze-table__col analyze-table__col--date">${date}</td>
+            <td class="analyze-table__col analyze-table__col--status">${pill}</td>
+            <td class="analyze-table__col analyze-table__col--action"><button type="button" class="btn-icon btn-icon--danger" data-action="del" data-icon="trash" aria-label="${_t("catalog.card.deleteAria")}"></button></td>
         </tr>`;
         })
         .join("");
+    _renderRequestsPagination(jobs.length);
     if (window.Icons) window.Icons.inject(tbody);
     tbody.querySelectorAll("[data-action=del]").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -289,7 +656,7 @@ function _renderCriteria(result) {
             return `<div class="analyze-criterion">
                 <div class="analyze-criterion__head">
                     <span class="analyze-criterion__icon">${_criterionIconHtml(c)}</span>
-                    <span class="analyze-criterion__name">${_escapeHtml(c.name)}</span>
+                    <span class="analyze-criterion__name">${_escapeHtml(_criterionDisplayName(c))}</span>
                     <span class="analyze-criterion__score" style="color:${color}">${sc}</span>
                 </div>
                 <div class="analyze-criterion__bar"><span style="width:${pct}%;background:${color}"></span></div>
@@ -303,6 +670,7 @@ const HIDDEN_DESCRIPTION_SECTIONS = [
     "распределение активности по зонам",
     "распределение активности",
     "доминирующие цвета",
+    "примечание",
 ];
 
 function _isHiddenSection(title) {
@@ -330,12 +698,45 @@ function _parseDescriptionSections(raw) {
     return sections;
 }
 
-function _renderDescription(result) {
-    const sections = _parseDescriptionSections(result.image_description);
+function _renderPalette(result) {
+    const colors = (result && result.palette) || [];
+    if (!colors.length) return "";
+    const chips = colors
+        .map((c) => {
+            const hex = String(c.hex || "#000000");
+            const name = String(c.name || hex);
+            const pct = c.percent != null ? `${c.percent}%` : "";
+            return `<div class="analyze-palette__sw">
+                <span class="analyze-palette__chip" style="background:${_escapeHtml(hex)}" title="${_escapeHtml(hex)}"></span>
+                <span class="analyze-palette__name">${_escapeHtml(name)}</span>
+                ${pct ? `<span class="analyze-palette__pct">${_escapeHtml(pct)}</span>` : ""}
+            </div>`;
+        })
+        .join("");
+    return `<h4 class="analyze-section-head">${_t("analyze.results.paletteTitle")}</h4>
+        <div class="analyze-palette">${chips}</div>`;
+}
+
+function _renderDescription(result, job) {
+    let sections = _parseDescriptionSections(result.image_description);
+    const hasContent = sections.some((s) => /содержание/i.test(s.title));
+    const typeLabel = _resolveJobCreativeLabel(job);
+    if (!hasContent && typeLabel) {
+        const extra = {
+            title: _t("analyze.results.contentTitle"),
+            body: `${_t("analyze.results.contentDepicted")}: ${typeLabel}.`,
+        };
+        if (job && job.description) {
+            extra.body += `\n${_t("analyze.results.contentAuthor")}: ${job.description}`;
+        }
+        sections = [extra, ...sections];
+    }
     const sectionsHtml = sections
-        .map((s) => {
+        .map((s, idx) => {
             const bodyHtml = _escapeHtml(s.body).replace(/\n/g, "<br>");
-            return `<h4 class="analyze-section-head">${_escapeHtml(s.title)}</h4>
+            const headClass =
+                idx === 0 ? "analyze-section-head analyze-section-head--lead" : "analyze-section-head";
+            return `<h4 class="${headClass}">${_escapeHtml(s.title)}</h4>
                 <div class="analyze-prose"><p>${bodyHtml}</p></div>`;
         })
         .join("");
@@ -344,7 +745,7 @@ function _renderDescription(result) {
     const issues = crit
         .map(
             (c) =>
-                `<li><strong>${_escapeHtml(c.name)}.</strong> ${_escapeHtml(c.analysis)}</li>`,
+                `<li><strong>${_escapeHtml(_criterionDisplayName(c))}.</strong> ${_escapeHtml(c.analysis)}</li>`,
         )
         .join("");
 
@@ -361,6 +762,7 @@ function _renderDescription(result) {
         ${sectionsHtml}
         <h4 class="analyze-section-head">${_t("analyze.results.issuesTitle")}</h4>
         <ul class="analyze-list analyze-list--dots">${issues}</ul>
+        ${_renderPalette(result)}
         ${overall}
     </div>`;
 }
@@ -377,7 +779,7 @@ function _renderRecommendations(result) {
         html += `<section class="analyze-rec-group">
             <div class="analyze-rec-group__head">
                 <span class="analyze-rec-group__icon" style="color:${color}">${_criterionIconHtml(c)}</span>
-                <span class="analyze-rec-group__title" style="color:${color}">${_escapeHtml(c.name)}</span>
+                <span class="analyze-rec-group__title" style="color:${color}">${_escapeHtml(_criterionDisplayName(c))}</span>
                 <span class="analyze-rec-group__score" style="color:${color}">${sc}</span>
             </div>
             <div class="analyze-rec-grid">${cards}</div>
@@ -392,26 +794,147 @@ function _fillResultView(job) {
     if (!host || !job || !job.result) return;
     const r = job.result;
     if (AN.resultSub === "criteria") host.innerHTML = _renderCriteria(r);
-    else if (AN.resultSub === "description") host.innerHTML = _renderDescription(r);
+    else if (AN.resultSub === "description") host.innerHTML = _renderDescription(r, job);
     else host.innerHTML = _renderRecommendations(r);
+    _renderPlanOverlay(AN.resultSub);
 }
 
-function _updateResultNav(completed) {
-    const navWrap = _$("analyze-result-nav");
-    const navCount = _$("analyze-result-count");
-    const navPrev = _$("analyze-result-prev");
-    const navNext = _$("analyze-result-next");
-    if (!navWrap || !navCount || !navPrev || !navNext) return;
-    if (completed.length <= 1) {
-        navWrap.classList.add("is-hidden");
+function _planFeatureForTab(tab) {
+    if (tab === "description") return "description";
+    if (tab === "recommendations") return "recommendations";
+    return null;
+}
+
+function _isTabLocked(tab) {
+    const feat = _planFeatureForTab(tab);
+    if (!feat || !window.Store || !Store.planHasFeature) return false;
+    return !Store.planHasFeature(feat);
+}
+
+function _planLabel(planId) {
+    const key = planId === "basic" ? "subs.basic" : planId === "pro" ? "subs.pro" : "subs.free";
+    return _t(key);
+}
+
+function _planOverlayContent(feature) {
+    if (feature === "description") {
+        return {
+            titleKey: "analyze.planOverlay.descTitle",
+            messageKey: "analyze.planOverlay.descDescription",
+        };
+    }
+    if (feature === "recommendations") {
+        return {
+            titleKey: "analyze.planOverlay.recTitle",
+            messageKey: "analyze.planOverlay.descRecommendations",
+        };
+    }
+    return {
+        titleKey: "analyze.planOverlay.titleShort",
+        messageKey: "analyze.planOverlay.description",
+    };
+}
+
+function _renderPlanOverlay(tab) {
+    const overlay = _$("analyze-plan-overlay");
+    if (!overlay || !window.TeremPlanOverlay) return;
+
+    if (!_isTabLocked(tab)) {
+        TeremPlanOverlay.hideInline(overlay);
         return;
     }
-    navWrap.classList.remove("is-hidden");
-    const idx = completed.findIndex((j) => j.id === AN.selectedJobId);
-    const safeIdx = idx >= 0 ? idx : 0;
-    navCount.textContent = `${safeIdx + 1} / ${completed.length}`;
-    navPrev.disabled = safeIdx <= 0;
-    navNext.disabled = safeIdx >= completed.length - 1;
+
+    const feature = _planFeatureForTab(tab);
+    const requiredPlan = Store.getRequiredPlanForFeature(feature);
+    const content = _planOverlayContent(feature);
+    TeremPlanOverlay.renderInline(overlay, {
+        planId: requiredPlan,
+        titleKey: content.titleKey,
+        messageKey: content.messageKey,
+        onSelect() {
+            _renderResultsPanel();
+        },
+    });
+}
+
+function _exportFeatureForFormat(format) {
+    if (format === "pdf") return "exportPdf";
+    if (format === "json") return "exportJson";
+    if (format === "txt") return "exportTxt";
+    return null;
+}
+
+function _showExportPlanOverlay(format) {
+    const feat = _exportFeatureForFormat(format);
+    if (!feat || !window.TeremPlanOverlay) return;
+    TeremPlanOverlay.open({
+        planId: Store.getRequiredPlanForFeature(feat),
+        titleKey: "analyze.planOverlay.exportTitle",
+        messageKey: "analyze.planOverlay.exportBlocked",
+        messageVars: { format: String(format || "").toUpperCase() },
+    });
+}
+
+function _resultsPageForJob(completed, jobId) {
+    const idx = completed.findIndex((j) => j.id === jobId);
+    if (idx < 0) return AN.resultsListPage;
+    return Math.floor(idx / AN.resultsListPageSize) + 1;
+}
+
+function _renderResultsListPagination(total) {
+    const wrap = _$("analyze-results-pagination");
+    const bar = _$("analyze-results-pager");
+    if (!wrap || !window.TeremPagination) return;
+    window.TeremPagination.renderSliderPagination({
+        wrap,
+        current: AN.resultsListPage,
+        totalItems: total,
+        pageSize: AN.resultsListPageSize,
+        sliderId: "analyze-results-page-slider",
+        sliderValId: "analyze-results-page-val",
+        onChange(page) {
+            AN.resultsListPage = page;
+            const completed = Store.getAnalyses().filter((j) => j.status === "completed" && j.result);
+            const start = (page - 1) * AN.resultsListPageSize;
+            const pageJobs = completed.slice(start, start + AN.resultsListPageSize);
+            if (pageJobs.length) {
+                AN.selectedJobId = pageJobs[0].id;
+            }
+            _renderResultsPanel();
+            const barEl = _$("analyze-results-pager");
+            if (barEl) barEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        },
+        onHide() {
+            if (bar) bar.classList.add("is-hidden");
+        },
+        onShow() {
+            if (bar) bar.classList.remove("is-hidden");
+        },
+    });
+}
+
+function _updateResultTabLocks() {
+    document.querySelectorAll("[data-result-tab]").forEach((btn) => {
+        const tab = btn.getAttribute("data-result-tab") || "";
+        btn.classList.toggle("is-locked", _isTabLocked(tab));
+    });
+}
+
+function _syncExportFormatsByPlan() {
+    const dd = _$("dd-an-export");
+    if (!dd || !window.Store || !Store.planHasFeature) return;
+    dd.querySelectorAll(".dropdown__option").forEach((opt) => {
+        const val = (opt.getAttribute("data-value") || "").toLowerCase();
+        let allowed = true;
+        if (val === "pdf") allowed = Store.planHasFeature("exportPdf");
+        if (val === "json") allowed = Store.planHasFeature("exportJson");
+        if (val === "txt") allowed = Store.planHasFeature("exportTxt");
+        opt.classList.toggle("is-hidden", !allowed);
+        opt.disabled = !allowed;
+    });
+    if (!Store.planHasFeature("exportPdf") && AN.exportFormat === "pdf") {
+        AN.exportFormat = Store.planHasFeature("exportJson") ? "json" : "txt";
+    }
 }
 
 function _renderResultsPanel() {
@@ -428,20 +951,39 @@ function _renderResultsPanel() {
         emptyList.classList.remove("is-hidden");
         detail.classList.add("is-hidden");
         pick.classList.remove("is-hidden");
-        _updateResultNav(completed);
+        _renderResultsListPagination(0);
         return;
     }
     emptyList.classList.add("is-hidden");
     if (!AN.selectedJobId || !completed.some((j) => j.id === AN.selectedJobId)) {
         AN.selectedJobId = completed[0].id;
+        AN.resultsListPage = 1;
     }
-    completed.forEach((job) => {
+
+    const totalPages = Math.max(1, Math.ceil(completed.length / AN.resultsListPageSize));
+    if (AN.resultsListPage > totalPages) AN.resultsListPage = totalPages;
+    if (AN.resultsListPage < 1) AN.resultsListPage = 1;
+    let start = (AN.resultsListPage - 1) * AN.resultsListPageSize;
+    let pageJobs = completed.slice(start, start + AN.resultsListPageSize);
+    const selectedIdx = completed.findIndex((j) => j.id === AN.selectedJobId);
+    if (selectedIdx >= 0 && (selectedIdx < start || selectedIdx >= start + AN.resultsListPageSize)) {
+        AN.resultsListPage = Math.floor(selectedIdx / AN.resultsListPageSize) + 1;
+        start = (AN.resultsListPage - 1) * AN.resultsListPageSize;
+        pageJobs = completed.slice(start, start + AN.resultsListPageSize);
+    }
+
+    pageJobs.forEach((job) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "analyze-result-card" + (job.id === AN.selectedJobId ? " is-active" : "");
         const date = Store.formatDate(new Date(job.createdAt));
         const title = (job.title || "—").replace(/</g, "&lt;");
-        btn.innerHTML = `<img src="${job.image}" alt=""><div><div class="analyze-result-card__title">${title}</div><div class="analyze-result-card__date">${date}</div></div>`;
+        const thumb = _resolveJobImage(job);
+        const typeLabel = _resolveJobCreativeLabel(job);
+        const typeHtml = typeLabel
+            ? `<div class="analyze-result-card__type">${_escapeHtml(typeLabel)}</div>`
+            : "";
+        btn.innerHTML = `<img src="${thumb}" alt=""><div><div class="analyze-result-card__title">${title}</div>${typeHtml}<div class="analyze-result-card__date">${date}</div></div>`;
         btn.addEventListener("click", () => {
             AN.selectedJobId = job.id;
             _renderResultsPanel();
@@ -449,41 +991,36 @@ function _renderResultsPanel() {
         list.appendChild(btn);
     });
 
+    _renderResultsListPagination(completed.length);
+
     const job = Store.findAnalysisJob(AN.selectedJobId);
     if (!job || !job.result) {
         detail.classList.add("is-hidden");
         pick.classList.remove("is-hidden");
-        _updateResultNav(completed);
         return;
     }
     pick.classList.add("is-hidden");
     detail.classList.remove("is-hidden");
-    img.src = job.image;
+    img.src = _resolveJobImage(job);
     img.alt = job.title || "";
+    const typeEl = _$("analyze-results-type");
+    const typeLabel = _resolveJobCreativeLabel(job);
+    if (typeEl) {
+        if (typeLabel) {
+            typeEl.textContent = `${_t("analyze.results.creativeTypeLabel")}: ${typeLabel}`;
+            typeEl.classList.remove("is-hidden");
+        } else {
+            typeEl.textContent = "";
+            typeEl.classList.add("is-hidden");
+        }
+    }
     document.querySelectorAll("[data-result-tab]").forEach((b) => {
         const on = b.getAttribute("data-result-tab") === AN.resultSub;
         b.classList.toggle("is-active", on);
     });
+    _updateResultTabLocks();
+    _syncExportFormatsByPlan();
     _fillResultView(job);
-    _updateResultNav(completed);
-}
-
-function _shiftSelectedResult(delta) {
-    const completed = Store.getAnalyses().filter((j) => j.status === "completed" && j.result);
-    if (completed.length <= 1) return;
-    const idx = completed.findIndex((j) => j.id === AN.selectedJobId);
-    const safeIdx = idx >= 0 ? idx : 0;
-    const next = Math.max(0, Math.min(completed.length - 1, safeIdx + delta));
-    if (next === safeIdx) return;
-    AN.selectedJobId = completed[next].id;
-    _renderResultsPanel();
-}
-
-function _bindResultNav() {
-    const prev = _$("analyze-result-prev");
-    const next = _$("analyze-result-next");
-    if (prev) prev.addEventListener("click", () => _shiftSelectedResult(-1));
-    if (next) next.addEventListener("click", () => _shiftSelectedResult(1));
 }
 
 function _estimateReportSize(result) {
@@ -495,52 +1032,100 @@ function _estimateReportSize(result) {
 }
 
 function _persistReportFromAnalysis(job, result) {
+    const imageRef = _resolveJobImage(job);
+    const creativeType = job.creativeType || result.creative_type || null;
+    const creativeTypeLabel = creativeType ? _creativeTypeLocalized(creativeType) : null;
     const report = {
         id: Store.makeId(),
         uploadId: job.uploadId || null,
         analysisJobId: job.id || null,
         title: job.title || _t("analyze.tab.results"),
         author: "—",
-        image: job.image,
+        image: job.uploadId ? null : imageRef,
         date: Store.formatDate(new Date()),
         size: _estimateReportSize(result),
         format: "JSON",
         description: result.summary || (result.image_description || "").slice(0, 280),
+        creativeType,
+        creativeTypeLabel,
         createdAt: new Date().toISOString(),
         overall_score: result.overall_score,
         score: result.overall_score,
-        result,
+        result: job.uploadId ? null : result,
     };
     Store.saveReport(report);
+    Store.updateAnalysisJob(job.id, { reportId: report.id });
     if (job.uploadId) {
-        Store.updateUpload(job.uploadId, { analyzed: true });
+        void Store.updateUpload(job.uploadId, { analyzed: true });
     }
 }
 
 async function _onCreateRequest() {
     const btn = _$("btn-create-request");
-    if (!AN.imageDataUrl || !btn) return;
+    const descTa = _$("analyze-description");
+    const userDesc = descTa ? descTa.value.trim() : "";
+    if (!AN.imageDataUrl || !userDesc || !btn) return;
+
+    if (window.Store && Store.isConcurrentAnalysisLimitReached && Store.isConcurrentAnalysisLimitReached()) {
+        if (window.TeremPlanOverlay) {
+            TeremPlanOverlay.open({
+                planId: Store.getUpgradePlanForConcurrentLimit(),
+                titleKey: "analyze.planOverlay.concurrentTitle",
+                messageKey: "analyze.planOverlay.concurrentLimit",
+            });
+        }
+        return;
+    }
+
     btn.disabled = true;
+    btn.classList.remove("is-active");
     const title = AN.imageTitle || _t("analyze.create.title");
-    const desc = AN.imageTitle || "";
+    const description = userDesc;
+    const ctx = _resolveCreativeContext();
     const job = {
         id: Store.makeId(),
         uploadId: AN.selectedUploadId,
         title,
-        description: desc,
-        image: AN.imageDataUrl,
+        description,
+        creativeType: AN.creativeType,
+        image: AN.selectedUploadId ? null : AN.imageDataUrl,
         createdAt: new Date().toISOString(),
         status: "processing",
         result: null,
     };
-    Store.saveAnalysisJob(job);
+    const savedJob = Store.saveAnalysisJob(job);
+    if (!savedJob || !Store.findAnalysisJob(job.id)) {
+        if (window.TeremDialog) {
+            await window.TeremDialog.openAlertDialog({
+                title: _t("common.info"),
+                message: _t("analyze.errorStorage"),
+                okKey: "common.ok",
+            });
+        } else {
+            window.alert(_t("analyze.errorStorage"));
+        }
+        btn.disabled = false;
+        _syncSubmitEnabled();
+        return;
+    }
     _activateTab("requests");
     _renderRequestsTable();
+
+    if (!(await _ensureFreshScorer())) {
+        Store.updateAnalysisJob(job.id, { status: "failed", result: null });
+        _renderRequestsTable();
+        btn.disabled = false;
+        _syncSubmitEnabled();
+        return;
+    }
 
     let result = null;
     let failed = false;
     try {
-        result = await _fetchAnalyze(AN.imageDataUrl);
+        result = await _fetchAnalyze(AN.imageDataUrl, {
+            description: userDesc,
+            creativeType: AN.creativeType,
+        });
     } catch (e) {
         failed = true;
     }
@@ -557,9 +1142,31 @@ async function _onCreateRequest() {
             window.alert(_t("analyze.errorDemo"));
         }
         btn.disabled = false;
+        _syncSubmitEnabled();
         return;
     }
-    Store.updateAnalysisJob(job.id, { status: "completed", result });
+    Store.updateAnalysisJob(job.id, {
+        status: "completed",
+        result,
+        creativeType: AN.creativeType,
+    });
+    const persisted = Store.findAnalysisJob(job.id);
+    if (!persisted || persisted.status !== "completed" || !persisted.result) {
+        Store.updateAnalysisJob(job.id, { status: "failed", result: null });
+        _renderRequestsTable();
+        if (window.TeremDialog) {
+            await window.TeremDialog.openAlertDialog({
+                title: _t("common.info"),
+                message: _t("analyze.errorStorage"),
+                okKey: "common.ok",
+            });
+        } else {
+            window.alert(_t("analyze.errorStorage"));
+        }
+        btn.disabled = false;
+        _syncSubmitEnabled();
+        return;
+    }
     if (result) {
         _persistReportFromAnalysis({ ...job, status: "completed", result }, result);
     }
@@ -568,27 +1175,47 @@ async function _onCreateRequest() {
     _renderRequestsTable();
     _activateTab("results");
     btn.disabled = false;
+    _syncSubmitEnabled();
 }
 
 function _readQueryAndApply() {
     const p = new URLSearchParams(window.location.search);
     const upload = p.get("upload");
     const tab = p.get("tab");
+    const jobParam = p.get("job");
+    const reportParam = p.get("report");
+    let resolvedJob = null;
+    if (reportParam) {
+        const report = Store.getReports().find((r) => r.id === reportParam);
+        if (report) resolvedJob = Store.findAnalysisJobForReport(report);
+    }
+    if (!resolvedJob && jobParam) {
+        resolvedJob = Store.findAnalysisJob(jobParam);
+    }
+    if (resolvedJob && resolvedJob.status === "completed" && resolvedJob.result) {
+        AN.selectedJobId = resolvedJob.id;
+        AN.resultSub = "criteria";
+    }
     if (upload) {
         const item = Store.findUpload(upload);
         if (item) {
+            AN.createSource = "catalog";
             AN.selectedUploadId = item.id;
             AN.imageDataUrl = item.image;
             AN.imageTitle = item.title || "";
-            _showCreatePreview();
+            void _refreshImageDimsAndUi();
+            _applyCreateSourceVisual();
         }
     }
     let target = tab;
     if (!target) {
         target = upload ? "create" : "requests";
     }
-    if (target !== "create" && target !== "requests" && target !== "results") target = "requests";
+    if (target !== "create" && target !== "requests" && target !== "results") {
+        target = jobParam && AN.selectedJobId ? "results" : "requests";
+    }
     _activateTab(target);
+    if (target === "results" && AN.selectedJobId) _renderResultsPanel();
 }
 
 function _bindTabs() {
@@ -603,35 +1230,75 @@ function _bindTabs() {
     });
 }
 
+function _bindGradingLinks() {
+    document.querySelectorAll("#btn-grading-help, [data-grading-link]").forEach((el) => {
+        el.addEventListener("click", (event) => {
+            const href = el.getAttribute("href");
+            if (!href) return;
+            event.preventDefault();
+            window.location.assign(href);
+        });
+    });
+}
+
 function _bindCreate() {
-    const file = _$("analyze-file-input");
-    const up = _$("btn-analyze-upload");
-    const cat = _$("btn-analyze-catalog");
-    const picker = _$("analyze-picker");
+    const fileInp = _$("analyze-file-input");
     const createBtn = _$("btn-create-request");
-    if (up && file) {
-        up.addEventListener("click", () => file.click());
-        file.addEventListener("change", () => {
-            const f = file.files && file.files[0];
-            if (!f || !f.type.startsWith("image/")) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                AN.selectedUploadId = null;
-                AN.imageDataUrl = reader.result;
-                AN.imageTitle = f.name.replace(/\.[^.]+$/, "");
-                _showCreatePreview();
-                if (picker) picker.classList.add("is-hidden");
-            };
-            reader.readAsDataURL(f);
+    const catTile = _$("analyze-tile-catalog");
+    const upTile = _$("analyze-tile-upload");
+
+    _bindCreativeChips();
+    _bindDescCounter();
+
+    if (catTile) catTile.addEventListener("click", () => _setCreateSource("catalog"));
+    if (upTile) {
+        upTile.addEventListener("click", () => {
+            if (AN.createSource !== "upload") _setCreateSource("upload");
+            _openAnalyzeFilePicker();
         });
     }
-    if (cat && picker) {
-        cat.addEventListener("click", () => {
-            picker.classList.toggle("is-hidden");
-            _renderCatalogPicker();
-        });
+
+    async function handleFileChosen(f) {
+        if (!f) return;
+        if (!/^image\/(png|jpeg|webp)$/i.test(f.type)) {
+            const msg = _t("upload.notImageMessage");
+            if (window.TeremDialog) {
+                await window.TeremDialog.openAlertDialog({
+                    title: _t("upload.notImageTitle"),
+                    message: msg,
+                    okKey: "common.ok",
+                });
+            } else window.alert(msg);
+            return;
+        }
+        if (f.size > ANALYZE_MAX_FILE_BYTES) {
+            const msg = _t("analyze.create.fileTooLarge");
+            if (window.TeremDialog) {
+                await window.TeremDialog.openAlertDialog({
+                    title: _t("common.info"),
+                    message: msg,
+                    okKey: "common.ok",
+                });
+            } else window.alert(msg);
+            return;
+        }
+        AN.selectedUploadId = null;
+        const reader = new FileReader();
+        reader.onload = () => {
+            AN.imageDataUrl = reader.result;
+            AN.imageTitle = f.name.replace(/\.[^.]+$/, "");
+            void _refreshImageDimsAndUi();
+        };
+        reader.readAsDataURL(f);
     }
+
+    if (fileInp) {
+        fileInp.addEventListener("change", () => handleFileChosen(fileInp.files && fileInp.files[0]));
+    }
+
     if (createBtn) createBtn.addEventListener("click", () => void _onCreateRequest());
+
+    _applyCreateSourceVisual();
 }
 
 function _safeFileName(name) {
@@ -678,6 +1345,8 @@ function _resultToText(job) {
     lines.push("");
     lines.push(`Креатив: ${title}`);
     lines.push(`Дата:    ${date}`);
+    const typeLabel = _resolveJobCreativeLabel(job);
+    if (typeLabel) lines.push(`Тип:     ${typeLabel}`);
     lines.push("");
 
     const sections = _parseDescriptionSections(r.image_description);
@@ -761,6 +1430,7 @@ function _resultToPrintableHtml(job) {
     const r = job.result || {};
     const title = _escapeHtml(job.title || _t("analyze.results.title"));
     const date = Store.formatDate(new Date(job.createdAt));
+    const typeLabel = _resolveJobCreativeLabel(job);
     const sections = _parseDescriptionSections(r.image_description);
     const crit = _sortCriteria(r.criteria);
     const previewSrc = job.image ? _escapeHtml(job.image) : "";
@@ -821,6 +1491,7 @@ function _resultToPrintableHtml(job) {
     .header__brand { font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: #8E032D; }
     .header__date { color: #666; font-size: 13px; }
     h1 { margin: 6px 0 18px; font-size: 28px; line-height: 1.2; }
+    .creative-type { margin: -8px 0 18px; font-size: 15px; color: #8E032D; }
     .preview { margin-bottom: 22px; }
     .preview img { max-width: 280px; max-height: 220px; border-radius: 10px; border: 1px solid #e5e5e5; display: block; }
     h2 { margin: 28px 0 12px; font-size: 18px; padding-bottom: 6px; border-bottom: 1px solid #e5e5e5; color: #8E032D; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -853,6 +1524,7 @@ function _resultToPrintableHtml(job) {
         <div class="header__date">${date}</div>
     </div>
     <h1>${title}</h1>
+    ${typeLabel ? `<p class="creative-type"><strong>Тип креатива:</strong> ${_escapeHtml(typeLabel)}</p>` : ""}
     ${previewSrc ? `<div class="preview"><img src="${previewSrc}" alt=""></div>` : ""}
 
     ${sections.length ? `<h2>Описание креатива</h2>${sectionsHtml}` : ""}
@@ -892,6 +1564,8 @@ function _exportAsJson(job) {
         creative: {
             title: job.title || "",
             created_at: job.createdAt || null,
+            type: _resolveJobCreativeType(job),
+            type_label: _resolveJobCreativeLabel(job),
         },
         overall: {
             score: r.overall_score != null ? r.overall_score : null,
@@ -929,8 +1603,14 @@ function _exportAsPdf(job) {
 function _exportReport(format) {
     const job = Store.findAnalysisJob(AN.selectedJobId);
     if (!job || !job.result) return;
-    if (format === "json") _exportAsJson(job);
-    else if (format === "txt") _exportAsTxt(job);
+    const fmt = String(format || "pdf").toLowerCase();
+    const feat = _exportFeatureForFormat(fmt);
+    if (feat && Store.planHasFeature && !Store.planHasFeature(feat)) {
+        _showExportPlanOverlay(fmt);
+        return;
+    }
+    if (fmt === "json") _exportAsJson(job);
+    else if (fmt === "txt") _exportAsTxt(job);
     else _exportAsPdf(job);
 }
 
@@ -942,37 +1622,57 @@ function _bindSaveExport() {
     const dd = _$("dd-an-export");
     if (dd) {
         dd.addEventListener("dropdown:change", (e) => {
-            AN.exportFormat = (e.detail.value || "pdf").toLowerCase();
+            const val = String(e.detail.value || "pdf").toLowerCase();
+            const feat = _exportFeatureForFormat(val);
+            if (feat && Store.planHasFeature && !Store.planHasFeature(feat)) {
+                _showExportPlanOverlay(val);
+                _syncExportFormatsByPlan();
+                return;
+            }
+            AN.exportFormat = val;
         });
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function _bootAnalyzePage() {
     _bindTabs();
-    _bindCreate();
-    _bindSaveExport();
-    _bindResultNav();
     _readQueryAndApply();
-    _showCreatePreview();
+    _bindCreate();
+    _bindGradingLinks();
+    _bindSaveExport();
 
     const st = _$("dd-an-status");
     const dt = _$("dd-an-date");
     if (st) {
         st.addEventListener("dropdown:change", (e) => {
             AN.filterStatus = e.detail.value || "all";
+            AN.requestsPage = 1;
             _renderRequestsTable();
         });
     }
     if (dt) {
         dt.addEventListener("dropdown:change", (e) => {
             AN.filterDate = e.detail.value || "all";
+            AN.requestsPage = 1;
             _renderRequestsTable();
         });
     }
     if (window.Icons) window.Icons.inject(document.body);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.Store && Store.ready) Store.ready.then(_bootAnalyzePage);
+    else _bootAnalyzePage();
 });
 
 document.addEventListener("i18n:change", () => {
     _renderRequestsTable();
     _renderResultsPanel();
+    _renderCatalogGrid();
+    _renderUploadPreview();
+});
+
+document.addEventListener("terem:plan-change", () => {
+    _renderResultsPanel();
+    _syncExportFormatsByPlan();
 });
